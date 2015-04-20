@@ -1,0 +1,4 @@
+variant	label prediction	confidence score	structure-only label prediction	structure-only confidence score	sequence-only label prediction	sequence-only confidence score	exposure	essential score	ddG prediction ~kcal/mol	interpretation	top 3 ranked features
+E14R	deleterious	0.84446547601	NA	NA	deleterious	0.84446547601	NA	NA	NA	NA	N, A
+A101W	deleterious	0.836738099042	NA	NA	deleterious	0.836738099042	NA	NA	NA	NA	N, A
+R84P	deleterious	0.810236268648	NA	NA	deleterious	0.810236268648	NA	NA	NA	NA	N, A

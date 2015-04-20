@@ -1,0 +1,60 @@
+program: probe.2.12.071128, run Mon Feb 23 14:49:37 2015
+command: /home/evan/Archive/Current/NYU_Fall4_2014/refactor_planning/simple_script/VIPUR_feature_executables/probe -Q 101 -rad1.4 -C -out 2C35.pdb
+selection: external
+name: dots
+density: 16.0 dots per A^2
+probeRad: 1.400 A
+VDWrad: (r * 1.000) + 0.000 A
+        
+subgroup: extern dots
+atoms selected: 5
+potential dots: 986
+potential area: 61.6 A^2
+  type                 #      %
+  O external_dots        4   0.4%
+             tot:        4   0.4%
+
+   contact surface area: 0.2 A^2
+accessible surface area: 1.0 A^2
+
+program: probe.2.12.071128, run Mon Feb 23 14:49:37 2015
+command: /home/evan/Archive/Current/NYU_Fall4_2014/refactor_planning/simple_script/VIPUR_feature_executables/probe -Q 14 -rad1.4 -C -out 2C35.pdb
+selection: external
+name: dots
+density: 16.0 dots per A^2
+probeRad: 1.400 A
+VDWrad: (r * 1.000) + 0.000 A
+        
+subgroup: extern dots
+atoms selected: 9
+potential dots: 1813
+potential area: 113.3 A^2
+  type                 #      %
+  C external_dots      313  17.3%
+  N external_dots      183  10.1%
+  O external_dots      367  20.2%
+             tot:      863  47.6%
+
+   contact surface area: 53.9 A^2
+accessible surface area: 197.1 A^2
+
+program: probe.2.12.071128, run Mon Feb 23 14:49:37 2015
+command: /home/evan/Archive/Current/NYU_Fall4_2014/refactor_planning/simple_script/VIPUR_feature_executables/probe -Q 84 -rad1.4 -C -out 2C35.pdb
+selection: external
+name: dots
+density: 16.0 dots per A^2
+probeRad: 1.400 A
+VDWrad: (r * 1.000) + 0.000 A
+        
+subgroup: extern dots
+atoms selected: 11
+potential dots: 2174
+potential area: 135.9 A^2
+  type                 #      %
+  C external_dots      107   4.9%
+  N external_dots       50   2.3%
+             tot:      157   7.2%
+
+   contact surface area: 9.8 A^2
+accessible surface area: 33.0 A^2
+
