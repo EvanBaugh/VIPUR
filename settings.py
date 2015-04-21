@@ -12,9 +12,9 @@ When setting up VIPUR, make sure you provide all the paths needed
 # PATHS
 
 PATH_TO_VIPUR = ''
-PATH_TO_VIPUR_EXECUTABLES = PATH_TO_VIPUR + '/VIPUR_feature_executables'
+PATH_TO_VIPUR_EXECUTABLES = '' #/VIPUR_feature_executables'
 
-PATH_TO_PSIBLAST = PATH_TO_VIPUR_EXECUTABLES + ''
+PATH_TO_PSIBLAST = PATH_TO_VIPUR_EXECUTABLES + '/psiblast_blast+2.2.25'
 PATH_TO_BLAST_DATABASE = ''
 PATH_TO_PROBE = PATH_TO_VIPUR_EXECUTABLES + '/probe'
 

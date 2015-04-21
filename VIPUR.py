@@ -363,15 +363,18 @@ from classification import *
 # MAIN
 
 # use disclaimer
+# still not sure how we are going to gate this
+# currently making code available...
 disclaimer = '='*80 + '\n\nRosetta is freely available to academic and government laboratories,\nA license must first be obtained through the University of Washington through the Express Licensing Program.\nThese agreements have standard terms and conditions that allow for rapid licensing by companies, organizations, or individuals.\nCommercial licesenses are also available and Rosetta Commercial users have a higher priority for support assistance from developers.\n\nYou can obtain a license for Rosetta at:\n\thttps://www.rosettacommons.org/software/license-and-download\n\nDO NOT use Rosetta code if you have not obtained a license, it is AGAINST THE LAW\nif you are a commercial user, Rosetta licenses are available\n\n'
 print disclaimer
-if not LICENSE:
-    r = raw_input( 'have you obtained a Rosetta license? (yes/no): ' )
-    if not r == 'yes':
-        raise IOError( 'you MUST obtain a Rosetta license before using the Rosetta software' )
+#if not LICENSE:
+#    r = raw_input( 'have you obtained a Rosetta license? (yes/no): ' )
+#    if not r == 'yes':
+#        raise IOError( 'you MUST obtain a Rosetta license before using the Rosetta software' )
 
 # credits to PROBE, BLAST+, Rosetta)
 credits = 'VIPUR also relies on:\nPROBE\nWord, et. al. Visualizing and Quantifying Molecular Goodness-of-Fit:\nSmall-probe Contact Dots with Explicit Hydrogens.\nJ. Mol. Biol. 285, 1711-1733 (1999).\n\nBLAST+\nCamacho, C. et al. BLAST+: architecture and applications.\nBMC Bioinformatics 10(421) (2009).'
+print credits
 
 
 # single run method
