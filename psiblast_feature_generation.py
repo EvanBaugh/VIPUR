@@ -13,6 +13,7 @@ settings.py in PSIBLAST_OPTIONS
 # IMPORT
 
 # common modules
+import re
 
 # bigger modules
 
@@ -136,8 +137,60 @@ def run_psiblast( sequence_filename ):
     # the only output we need
     return psiblast_options['out_ascii_pssm']
 
-# copied parsing method
+
+# modified by njc
+# now robust to versions, based on separator rather than anticipated structure
 def extract_pssm_from_psiblast_pssm( pssm_filename , headers = 3 , trailers = 7 , columns = len( PROTEIN_LETTERS ) , first_columns_width = 3 , second_columns_width = 4 ):
+    # most args are ignored---left for backward compatibility.
+
+    # fields can be separated by spaces and perhaps a '-' sign, or in some cases just a '-' sign.
+    #
+    # note: this re captures, so we will be given each field's separator. we need this to restore
+    # '-' signs.
+    splitre = re.compile( '( +-?|-)' )
+
+    ll = []
+    for l in open( pssm_filename ):
+        ff = splitre.split( l[:-1] )
+        if ff[0] == '': ff.pop( 0 )    # re splits include a dummy empty field if the first field
+                                       # begins with a separator. (so drop it)
+        ff = [e[-1] + o for e , o in zip( ff[::2] , ff[1::2] )]    # restore the separators to each field.
+        ll.append( ff )
+
+    # HACK: assume lines with data have the largest number of columns.
+    mfc = max( [len(ff) for ff in ll] )
+
+    # line listing amino acids has four fewer columns: it is missing position, query, information,
+    # and relative weight fields. there should be one and only one such line.
+    aaline = [ff for ff in ll if len( ff ) == mfc - 4]
+    assert len( aaline ) == 1
+    aaline = aaline[0]
+    
+    # build a map from column index to aa, then run some sanity checks. note the line lists each aa twice.
+    x2aa = dict( [(x , aa.strip()) for x , aa in enumerate( aaline )] )
+    numaa = len( x2aa )/2
+    assert numaa*2 == len( x2aa )
+    assert numaa == columns
+    assert not [x for x in xrange( numaa ) if not x2aa[x] == x2aa[x + numaa]]
+
+    pssm_dict = {}
+    for ff in ll:
+        if not len( ff ) == mfc: continue
+        pos = int( ff[0] )
+        pssm_dict[pos] = {
+            'position':                pos ,
+            'query identity':          ff[1] ,
+            'log-likelihood':          dict( [(x2aa[x] , int(v)) for x , v in enumerate( ff[2:2 + numaa] )] ) ,
+            'approximate frequencies': dict( [(x2aa[x] , float(v)/100.) for x , v in enumerate( ff[2+numaa:2 + 2*numaa] )] ) ,
+            'information content':     float( ff[-2] ) ,
+            '?':                       float( ff[-1] ) ,
+        }
+    #DEBUG pssm_dict['XTRA_AALINE'] = aaline
+    return pssm_dict
+
+
+# copied parsing method, currently deprecated
+def BRITTLE_extract_pssm_from_psiblast_pssm( pssm_filename , headers = 3 , trailers = 7 , columns = len( PROTEIN_LETTERS ) , first_columns_width = 3 , second_columns_width = 4 ):
     """
     Returns a dict summarizing the contents of PSIBLAST output  <pssm_filename>
     
