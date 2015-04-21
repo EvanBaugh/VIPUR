@@ -1,5 +1,5 @@
 Code for running VIPUR can be found here.
-The VIPUR training set files (feature set and original structures) can be found at https://drive.google.com/a/nyu.edu/folderview?id=0B6exAih8BuuUVXBHRUlFRVZKd1U&usp=drive_web.
+The VIPUR training set files (feature set and original structures) and third party executables (built for 64-bit linux) can be found at https://drive.google.com/a/nyu.edu/folderview?id=0B6exAih8BuuUVXBHRUlFRVZKd1U&usp=drive_web.
 
 What is VIPUR?
 The VIPUR pipeline analyzes protein variants by considering conservation scores
