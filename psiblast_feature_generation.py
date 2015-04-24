@@ -138,9 +138,66 @@ def run_psiblast( sequence_filename ):
     return psiblast_options['out_ascii_pssm']
 
 
+# modified by njc, hybrid method
+# now robust to versions, based on separator rather than anticipated structure
+def extract_pssm_from_psiblast_pssm( pssm_filename , aa_line_shift = -4 , columns = len( PROTEIN_LETTERS ) ):
+    # most args are ignored---left for backward compatibility.
+
+    # fields can be separated by spaces and perhaps a '-' sign, or in some cases just a '-' sign.
+    #
+    # note: this re captures, so we will be given each field's separator. we need this to restore
+    # '-' signs.
+    split_line = re.compile( '( +-?|-)' )
+
+    f = open( pssm_filename , 'r' )
+    lines = [i.rstrip( '\n' ) for i in f.xreadlines()]
+    f.close()
+
+    split_lines = []
+    for line in lines:
+        ff = split_line.split( line )
+        if not ff[0]:
+            ff.pop( 0 )    # re splits include a dummy empty field if the first field
+                           # begins with a separator. (so drop it)
+        ff = [sep[-1] + dat for sep , dat in zip( ff[::2] , ff[1::2] )]    # restore the separators to each field.
+        # only care about "-" character if its there
+        split_lines.append( ff )
+
+    # HACK: assume lines with data have the largest number of columns.
+    most_columns = max( [len( ff ) for ff in split_lines] )
+
+    # line listing amino acids has four fewer columns: it is missing position, query, information,
+    # and relative weight fields. there should be one and only one such line.
+    aa_line = [ff for ff in split_lines if len( ff ) == most_columns + aa_line_shift]
+    assert len( aa_line ) == 1
+    aa_line = aa_line[0]
+    
+    # build a map from column index to aa, then run some sanity checks. note the line lists each aa twice.
+    x2aa = dict( [(x , aa.strip()) for x , aa in enumerate( aa_line )] )
+    num_aa = len( x2aa )/2
+    assert num_aa*2 == len( x2aa )
+    assert num_aa == columns    # sanity check
+    assert not [x for x in xrange( num_aa ) if not x2aa[x] == x2aa[x + num_aa]]
+
+    pssm_dict = {}
+    for ff in split_lines:
+        if not len( ff ) == most_columns: continue
+        pos = int( ff[0] )
+        pssm_dict[pos] = {
+            'position':                pos ,
+            'query identity':          ff[1] ,
+            'log-likelihood':          dict( [(x2aa[x] , int(v)) for x , v in enumerate( ff[2:2 + num_aa] )] ) ,
+            'approximate frequencies': dict( [(x2aa[x] , float(v)/100) for x , v in enumerate( ff[2+num_aa:2 + 2*num_aa] )] ) ,
+            'information content':     float( ff[-2] ) ,
+            '?':                       float( ff[-1] ) ,
+        }
+    #DEBUG pssm_dict['XTRA_AALINE'] = aaline
+    return pssm_dict
+
+
 # modified by njc
 # now robust to versions, based on separator rather than anticipated structure
-def extract_pssm_from_psiblast_pssm( pssm_filename , headers = 3 , trailers = 7 , columns = len( PROTEIN_LETTERS ) , first_columns_width = 3 , second_columns_width = 4 ):
+def njc_extract_pssm_from_psiblast_pssm( pssm_filename , headers = 3 , trailers = 7 , columns = len( PROTEIN_LETTERS ) , first_columns_width = 3 , second_columns_width = 4 ):
     # most args are ignored---left for backward compatibility.
 
     # fields can be separated by spaces and perhaps a '-' sign, or in some cases just a '-' sign.
