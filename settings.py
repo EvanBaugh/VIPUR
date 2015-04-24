@@ -103,7 +103,7 @@ AMINOCHANGE_GROUPS = [
 PSIBLAST_OPTIONS = {
     'db' : PATH_TO_BLAST_DATABASE ,
 
-    'num_threads' : 1 ,
+    'num_threads' : 40 ,
     'num_iterations' : 2 ,
     'pseudocount' : 2 ,
 
@@ -154,20 +154,24 @@ ROSETTA_RELAX_OPTIONS = {
     'database' : PATH_TO_ROSETTA_DATABASE ,
 
     'nstruct' : 5 ,    # 50!
+#    'nstruct' : 50 ,
     'relax:fast' : '' ,
     'evaluation:gdtmm' : 'true' ,
 #    'in:file:native' : lambda x : x + '.pdb' ,
 #    'bGDT' : 'true' ,
     'run:ignore_zero_occupancy' : 'false' ,
 #    'jd2:mpi_file_buf_job_distributor' : 'false' ,
-    'run:multiple_processes_writing_to_one_directory' : '' ,
+#    'run:multiple_processes_writing_to_one_directory' : '' ,
 
     'run:constant_seed' : '' ,    # for reproducibility
     'run:jran' : 17 ,
     
     'out:file:silent' : lambda x : x + '.silent' ,
-    'out:file:scorefile' : lambda x : x + '.sc'
+    'out:file:scorefile' : lambda x : x + '.sc' ,
+    
+#    'parallel' : 40 ,    # a Rosetta option?
     }
+ROSETTA_RELAX_PARALLEL = 40    # OPTIONS should be reserved for explicit options to Rosetta
 
 ROSETTA_SCORE_OPTIONS = {
     'database' : PATH_TO_ROSETTA_DATABASE ,

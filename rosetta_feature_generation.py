@@ -14,12 +14,13 @@ Note: add documentation for release
 
 # common modules
 import os
+import tempfile
 from math import floor
 
 # bigger modules
 
 # custom modules
-from settings import PATH_TO_ROSETTA_DDG_MONOMER , PATH_TO_ROSETTA_RELAX , PATH_TO_ROSETTA_SCORE , PATH_TO_PYMOL , USE_PYROSETTA , PATH_TO_VIPUR , ROSETTA_DDG_MONOMER_OPTIONS , ROSETTA_RELAX_OPTIONS , ROSETTA_SCORE_OPTIONS , ROSETTA_TERMS_TO_COMPARE
+from settings import PATH_TO_ROSETTA_DDG_MONOMER , PATH_TO_ROSETTA_RELAX , PATH_TO_ROSETTA_SCORE , PATH_TO_PYMOL , USE_PYROSETTA , PATH_TO_VIPUR , ROSETTA_DDG_MONOMER_OPTIONS , ROSETTA_RELAX_OPTIONS , ROSETTA_SCORE_OPTIONS , ROSETTA_TERMS_TO_COMPARE , ROSETTA_RELAX_PARALLEL
 from helper_methods import create_executable_str , run_local_commandline
 
 ################################################################################
@@ -187,13 +188,98 @@ def extract_score_terms_from_ddg_monomer( out_filename = 'ddg_predictions.out' ,
 #######
 # RELAX
 
-# local
-def run_rosetta_relax( pdb_filename ):
+# modified by njc
+def run_rosetta_relax( pdb_filename , extra_options = {} , run = True , parallel = ROSETTA_RELAX_PARALLEL ):
     root_filename = pdb_filename.rstrip( '.pdb' )
     
     # collect the options, set the input, derive the output filenames
     relax_options = {}
     relax_options.update( ROSETTA_RELAX_OPTIONS )
+    relax_options.update( extra_options )
+    relax_options['s'] = pdb_filename
+    relax_options['native'] = pdb_filename    # required to get gdtmm scores
+    for i in relax_options.keys():
+        if '__call__' in dir( relax_options[i] ):
+            relax_options[i] = relax_options[i]( root_filename )
+
+    # ...weird Rosetta append behavior...
+#    if os.path.isfile( relax_options['out:file:silent'] ):
+#        os.remove( relax_options['out:file:silent'] )
+#    if os.path.isfile( relax_options['out:file:scorefile'] ):
+#        os.remove( relax_options['out:file:scorefile'] )
+
+
+
+    nstruct = int( relax_options.get( 'nstruct' , '0' ) )
+    parallel = int( parallel )
+    tmp_file = None
+    if nstruct > 1 and parallel > 1:
+        relax_options['nstruct'] = 1 #TODO: Add chunking option?
+        score_filename = relax_options['out:file:scorefile']
+        silent_filename = relax_options['out:file:silent']
+
+        if 'run:jran' in relax_options:
+            restoreJran = True
+            jran = int( relax_options['run:jran'] )
+        else:
+            restoreJran = False
+            jran = 123
+
+        tmp_file = tempfile.NamedTemporaryFile( delete = False )
+        print 'Parallel relax commands are in ' + tmp_file.name
+
+        for s in xrange( nstruct ):
+            tag = '_%05d' % s
+            relax_options['run:jran'] = jran*nstruct + s
+            relax_options['out:file:scorefile'] = score_filename + tag
+            relax_options['out:file:silent'] = silent_filename + tag
+            print >>tmp_file , create_executable_str( PATH_TO_ROSETTA_RELAX , args = [] , options = relax_options ) + " > %s 2>&1; echo '[[VIPURLOG]]' %s %d" % ((silent_filename + tag).replace( 'silent_' , 'log_' ) , pdb_filename , s + 1 )
+
+        tmp_file.close()
+        # the "find ... | xargs ..." idiom is used just in case nstruct is ever a *very* large number.
+        command = '''\
+parallel -j %d -a %s
+find . -name '%s_[0-9]*[0-9]' | xargs cat | awk 'NR == 1 || $2 != "score" {print $0}' > %s
+find . -name '%s_[0-9]*[0-9]' | xargs rm
+find . -name '%s_[0-9]*[0-9]' | xargs cat | awk 'NR <= 2 || !($2 == "score" || $1 == "SEQUENCE:") {print $0}' > %s
+find . -name '%s_[0-9]*[0-9]' | xargs rm
+''' % (parallel , tmp_file.name , score_filename , score_filename , score_filename , silent_filename , silent_filename , silent_filename)
+        print 'Parallel relax driver command:', command
+
+        # restore option values
+        relax_options['nstruct'] = str( nstruct )
+        relax_options['out:file:scorefile'] = score_filename
+        relax_options['out:file:silent'] = silent_filename
+        if restoreJran:
+            relax_options['run:jran'] = jran
+    else:
+        command = create_executable_str( PATH_TO_ROSETTA_RELAX , args = [] , options = relax_options )
+ 
+    if run:
+        return (command , tmp_file.name , score_filename , silent_filename)
+    
+    run_local_commandline( command )
+    if tmp_file:
+        os.unlink( tmp_file.name )
+
+
+    
+#    command = create_executable_str( PATH_TO_ROSETTA_RELAX , args = [] , options = relax_options )
+
+#    run_local_commandline( command )
+    
+    # the only output we need
+#    return relax_options['out:file:scorefile']
+    return relax_options['out:file:silent']
+
+# local
+def run_rosetta_relax_local( pdb_filename , extra_options = {} ):
+    root_filename = pdb_filename.rstrip( '.pdb' )
+    
+    # collect the options, set the input, derive the output filenames
+    relax_options = {}
+    relax_options.update( ROSETTA_RELAX_OPTIONS )
+    relax_options.update( extra_options )
     relax_options['s'] = pdb_filename
     relax_options['native'] = pdb_filename    # required to get gdtmm scores
     for i in relax_options.keys():

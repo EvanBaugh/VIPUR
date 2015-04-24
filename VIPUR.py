@@ -341,6 +341,7 @@ performance is using structures that have not been pre-relaxed
 
 # common modules
 import os
+import sys
 import shutil
 import subprocess
 import optparse
@@ -350,7 +351,7 @@ import time    # for debugging only
 
 # custom modules
 from settings import *
-from helper_methods import create_directory , copy_file
+from helper_methods import create_directory , copy_file , run_local_commandline
 from pre_processing import *
 
 from psiblast_feature_generation import *
@@ -379,7 +380,7 @@ print credits
 
 # single run method
 def run_VIPUR( pdb_filename , variants_filename , prediction_filename = '' , out_path = '' ,
-        target_chain = 'A' , sequence_filename = '' , write_numbering_map = True ,
+        target_chain = 'A' , sequence_filename = '' , relax_nstruct = '-1' , write_numbering_map = True ,
         sequence_only = False ):
     """
     Runs the VIPUR pipeline on the variants of the protein in  <pdb_filename>
@@ -424,6 +425,11 @@ def run_VIPUR( pdb_filename , variants_filename , prediction_filename = '' , out
     structurally-informed hypothesis as to why variants are likely to
     disrupt the protein
     """
+    try:
+        relax_nstruct = int( relax_nstruct )
+    except:
+        raise Exception( 'Illegal value for relax_nstruct: ' + str( relax_nstruct ) )
+
     # prepare output writing
     # support writing to  <out_path>
     debug_time = [('start' , time.time())]
@@ -483,6 +489,7 @@ def run_VIPUR( pdb_filename , variants_filename , prediction_filename = '' , out
     if not variants:
         raise IOError( 'none of the variants in \"' + variants_filename + '\" are acceptable!!?!' )
     print '\ngenerating features for variants:\n\t' + '\n\t'.join( variants )
+    sys.stdout.flush()
 
     # for storing the feature values
     variants = dict( [(i , {}) for i in variants] )
@@ -512,7 +519,8 @@ def run_VIPUR( pdb_filename , variants_filename , prediction_filename = '' , out
     # feature generation
     
     # determine the "aminochange" values
-    print 'evaluating the \"aminochange\" values'
+    print '[[VIPURLOG]]evaluating the \"aminochange\" values'
+    sys.stdout.flush()
     evaluate_aminochange = lambda nat , var : 2 - int( [i for i in AMINOCHANGE_GROUPS if nat in i][0] == [i for i in AMINOCHANGE_GROUPS if var in i][0] ) - int( nat == var )
     for i in variants.keys():
         variants[i]['aminochange'] = evaluate_aminochange( i[0] , i[-1] )
@@ -520,12 +528,14 @@ def run_VIPUR( pdb_filename , variants_filename , prediction_filename = '' , out
     debug_time.append( ('preprocessing' , time.time()) )
     
     # run PSIBLAST
-    print 'running PSIBLAST...'
+    print '[[VIPURLOG]]running PSIBLAST...'
+    sys.stdout.flush()
     psiblast_filename = run_psiblast( sequence_filename )
     psiblast_filename = sequence_filename.rstrip( '.fa' ) + '.pssm'
         
     # extract PSIBLAST feature values
-    print 'extracting PSSM features from PSIBLAST output'
+    print '[[VIPURLOG]]extracting PSSM features from PSIBLAST output'
+    sys.stdout.flush()
     # quality control? check to make sure the PSIBLAST output is proper?
     pssm = extract_pssm_from_psiblast_pssm( psiblast_filename )
     for i in variants.keys():
@@ -544,7 +554,8 @@ def run_VIPUR( pdb_filename , variants_filename , prediction_filename = '' , out
 
     # run PROBE
     if not sequence_only:
-        print 'running PROBE and determining the ACCP'
+        print '[[VIPURLOG]]running PROBE and determining the ACCP'
+        sys.stdout.flush()
         probe_output_filename , positions = run_probe( pdb_filename , variants )
     
         # extract the PROBE feature
@@ -564,7 +575,8 @@ def run_VIPUR( pdb_filename , variants_filename , prediction_filename = '' , out
         mut_filename = pdb_filename.rstrip( '.pdb' ) + '.mut'
         write_mut_file( variants , residue_map , mut_filename )
 
-        print 'running Rosetta ddg_monomer...'
+        print '[[VIPURLOG]]running Rosetta ddg_monomer...'
+        sys.stdout.flush()
         ddg_monomer_out_filename = run_rosetta_ddg_monomer( pdb_filename , mut_filename )
     
         # extract the ddg_monomer score results
@@ -581,8 +593,55 @@ def run_VIPUR( pdb_filename , variants_filename , prediction_filename = '' , out
 
     
         # run Rosetta relax
-        print 'running Rosetta relax on the native structure...'
-        native_relax_filename = run_rosetta_relax( pdb_filename )    # reference for other structures
+        relax_new_options = {}
+        if not relax_nstruct == -1:
+            relax_new_options= {'nstruct' : relax_nstruct}
+
+        print '[[VIPURLOG]]running Rosetta relax on the native and variant structures ...'
+        sys.stdout.flush()
+
+        relax_cmds = {}
+        relax_cmds['__native__'] = run_rosetta_relax( pdb_filename, relax_new_options, run = True )    # reference for other structures
+        master_relax_task_file = open( 'MasterRelaxTaskFile' , 'w' )
+        master_relax_task_file.write( open( relax_cmds['__native__'][1] ).read() )
+        for v in variants:
+            # note: this current version assumes 1:1 for variant structures and
+            #    variants...could change in the future...
+            variant_structure = variants[v]['variant structure filename']
+            relax_cmds[v] = run_rosetta_relax( variant_structure , relax_new_options , run = True )
+            master_relax_task_file.write( open( relax_cmds[v][1] ).read() )
+        master_relax_task_file.close()
+
+        for relax_task , (command , tmp_filename , score_filename , silent_filename) in relax_cmds.iteritems():
+            print '>>>' , relax_task , command , tmp_filename , score_filename , silent_filename
+        
+        #run_local_commandline('parallel --line-buffer --wd %s -S 16/scda000,20/scda001,20/scda002,20/scda003 -a %s'%(out_path, mrtf.name))
+        #TODO: in real use, we would doing something to allocated nodes, we fake it here
+        run_local_commandline( 'parallel --line-buffer --wd %s -S 10/scda000,10/linvm021,10/linvm022,10/linvm023,10/linvm024,10/linvm025 -a %s' % (out_path , master_relax_task_file.name) )
+        # for each variant and the native structure, create a single silent and a single score file for the individual runs.
+  
+        # merge the partial output files.
+        for relax_task, (command , tmp_filename , score_filename, silentfn) in relax_cmds.iteritems():
+            score_file = open( score_filename , 'w' )
+            silent_file = open( silent_filename , 'w' )
+            first = True
+            for s in xrange( relax_nstruct ):
+                tag = '_%05d' % s # MUST BE CONSISTENT WITH rosetta_feature_generation.py
+                task_score_file = open( score_filename + tag ).readlines()
+                task_silent_file = open( silent_filename + tag ).readlines()
+                if first:
+                    first = False
+                else:
+                    task_score_file = task_score_file[1:]
+                    task_silent_file = task_silent_file[2:]
+                score_file.write( ''.join( tast_score_file ) )
+                silent_file.write( ''.join( task_silent_file ) )
+            score_file.close()
+            silent_file.close()
+
+        native_relax_filename = relax_cmds['__native__'][3]    # the silent file for this
+
+#        native_relax_filename = run_rosetta_relax( pdb_filename )    # reference for other structures
         native_score_filename = run_rosetta_rescore( native_relax_filename , native_filename = pdb_filename )
         native_scorefile_dict = extract_scores_from_scorefile( native_score_filename )    # save time, only parse this once
         debug_time.append( ('relax' , time.time()) )
@@ -594,13 +653,15 @@ def run_VIPUR( pdb_filename , variants_filename , prediction_filename = '' , out
             # note: this current version assumes 1:1 for variant structures and
             #    variants...could change in the future...
     
-            print 'running Rosetta relax on ' + variant_structure + '...'
-            relax_filename = run_rosetta_relax( variant_structure )
+            print '[[VIPURLOG]]running Rosetta relax on ' + variant_structure + '...'
+            sys.stdout.flush()
+            relax_filename = relax_cmds[i][3]    # the silent file
         
             debug_time.append( ('structure ' + variant_structure , time.time()) )
 
             # post process, extract scores and generate quartile scores
-            print 'extracting the relax features...'
+            print '[[VIPURLOG]]extracting the relax features...'
+            sys.stdout.flush()
 
             # additional step, rescore with Rosetta
             # only required to add in 2 scores that SHOULD be output by default with relax
@@ -611,8 +672,9 @@ def run_VIPUR( pdb_filename , variants_filename , prediction_filename = '' , out
             # between the native and variant score distributions
             quartile_scores = extract_quartile_score_terms_from_scorefiles( score_filename , native_scorefile_dict )
             # make sure there is not overlap
-            if [None for j in quartile_scores.keys() if j in variants[i].keys()]:
-                raise IOError( '!!?! somehow your scorefile has score terms that match the name(s) of features that already exist!!?! something has gone horribly wrong...' )
+            overlaps = [j for j in quartile_scores.keys() if j in variants[i].keys()]
+            if overlaps:
+                raise IOError( '!!?! somehow your scorefile has score terms that match the name(s) of features that already exist!!?! something has gone horribly wrong...' + str( overlaps ) )
             variants[i].update( quartile_scores )
         
     
