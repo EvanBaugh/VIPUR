@@ -12,6 +12,7 @@ are contained within the script associated with those features
 # IMPORT
 
 # common modules
+import os
 
 # bigger modules
 
@@ -94,5 +95,31 @@ def check_variants( variants , sequence , residue_map , protein_letters = PROTEI
         permissible_variants.append( variation )
 
     return permissible_variants
+
+# extract the chains from the PDB
+# only considers ATOM lines, mainly for use with clean_nucleic_acid_lines_from_pdb
+def extract_chains_from_pdb( pdb_filename , only = ['ATOM'] ):
+    """
+    Returns the chains found in  <pdb_filename>
+    
+    Only consider lines starting with  <only>
+    """
+    pdb_filename = os.path.abspath( pdb_filename )
+    if os.path.exists( pdb_filename ):
+        # load the data
+        f = open( pdb_filename , 'r' )
+        data = [i for i in f.xreadlines() if i[:6].strip() in only]
+        f.close()
+    
+        # find unique chains
+        chains = []
+        for i in data:
+            if not i[21] in chains:
+                chains.append( i[21] )
+
+        return chains
+    else:
+        print 'No such file or directory named ' + os.path.relpath( pdb_filename )
+        return False
 
 

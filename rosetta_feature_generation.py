@@ -209,7 +209,7 @@ def run_rosetta_relax( pdb_filename , extra_options = {} , run = True , parallel
 #        os.remove( relax_options['out:file:scorefile'] )
 
 
-
+    # for njc parallelization
     nstruct = int( relax_options.get( 'nstruct' , '0' ) )
     parallel = int( parallel )
     tmp_file = None
@@ -252,17 +252,17 @@ find . -name '%s_[0-9]*[0-9]' | xargs rm
         relax_options['out:file:silent'] = silent_filename
         if restoreJran:
             relax_options['run:jran'] = jran
+
+        if run:
+            return (command , tmp_file.name , score_filename , silent_filename)
+
+        if tmp_file:
+            os.unlink( tmp_file.name )
     else:
         command = create_executable_str( PATH_TO_ROSETTA_RELAX , args = [] , options = relax_options )
- 
+
     if run:
-        return (command , tmp_file.name , score_filename , silent_filename)
-    
-    run_local_commandline( command )
-    if tmp_file:
-        os.unlink( tmp_file.name )
-
-
+        run_local_commandline( command )
     
 #    command = create_executable_str( PATH_TO_ROSETTA_RELAX , args = [] , options = relax_options )
 
