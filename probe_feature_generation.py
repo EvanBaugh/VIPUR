@@ -19,14 +19,14 @@ settings.py in PROBE_OPTIONS
 # bigger modules
 
 # custom modules
-from settings import AMINO_ACID_CODES , PATH_TO_PROBE , PROBE_OPTIONS
+from vipur_settings import AMINO_ACID_CODES , PATH_TO_PROBE , PROBE_OPTIONS
 from helper_methods import create_executable_str , run_local_commandline
 
 ################################################################################
 # METHODS
 
 # local
-def run_probe( pdb_filename , variants , probe_output_filename = '' ):
+def run_probe( pdb_filename , variants , probe_output_filename = '' , run = True ):
     """
     Runs PROBE on  <pdb_filename>  on the positions found among  <variants>
     using the default options in PROBE_OPTIONS and writes the output to
@@ -40,7 +40,8 @@ def run_probe( pdb_filename , variants , probe_output_filename = '' ):
     positions.sort()
     
     # generate the commands to run
-    command = '#!/bin/sh\nrm ' + probe_output_filename + '\ntouch ' + probe_output_filename + '\n'
+#    command = '#!/bin/sh\nrm ' + probe_output_filename + '\ntouch ' + probe_output_filename + '\n'
+    command = 'rm ' + probe_output_filename + ';touch ' + probe_output_filename + ';'
     # delete any prior copy since we will append to it
     
     for i in positions:
@@ -50,12 +51,27 @@ def run_probe( pdb_filename , variants , probe_output_filename = '' ):
         probe_options['out'] = pdb_filename
         probe_options['Q'] = str( i )
 
-        command += create_executable_str( PATH_TO_PROBE , [] , probe_options , probe_output_filename , append = True ) +'\n'
+        command += create_executable_str( PATH_TO_PROBE , [] , probe_options , probe_output_filename , append = True ) +';'#'\n'
 
     # run PROBE, store the output
-    run_local_commandline( command )
+    if run:
+        run_local_commandline( command )
+
+        return probe_output_filename , positions
+    else:
+        # the command, well, get positions etc. too
+        return command , probe_output_filename , positions
+
+# simple, for now just check if empty or not
+def check_probe_output( probe_output_filename ):
+    # simple enough, for now just check if empty
+    f = open( probe_output_filename , 'r' )
+    success = bool( f.read().strip() )    # load all of this!?
+    f.close()
     
-    return probe_output_filename , positions
+    # use the extract method? check is match desired positions?
+    
+    return success
 
 # simple parsing, only run PROBE on variant positions, rank ordered
 def extract_accp_from_probe( probe_output_filename ):

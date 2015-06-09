@@ -20,7 +20,7 @@ from math import floor
 # bigger modules
 
 # custom modules
-from settings import PATH_TO_ROSETTA_DDG_MONOMER , PATH_TO_ROSETTA_RELAX , PATH_TO_ROSETTA_SCORE , PATH_TO_PYMOL , USE_PYROSETTA , PATH_TO_VIPUR , ROSETTA_DDG_MONOMER_OPTIONS , ROSETTA_RELAX_OPTIONS , ROSETTA_SCORE_OPTIONS , ROSETTA_TERMS_TO_COMPARE , ROSETTA_RELAX_PARALLEL
+from vipur_settings import PATH_TO_ROSETTA_DDG_MONOMER , PATH_TO_ROSETTA_RELAX , PATH_TO_ROSETTA_SCORE , PATH_TO_PYMOL , USE_PYROSETTA , PATH_TO_VIPUR , ROSETTA_DDG_MONOMER_OPTIONS , ROSETTA_RELAX_OPTIONS , ROSETTA_SCORE_OPTIONS , ROSETTA_TERMS_TO_COMPARE , ROSETTA_RELAX_PARALLEL
 from helper_methods import create_executable_str , run_local_commandline
 
 ################################################################################
@@ -136,7 +136,7 @@ def write_mut_file( variants , residue_map , mut_filename ):
     f.close()
 
 # local
-def run_rosetta_ddg_monomer( pdb_filename , mut_filename , out_filename = '' , cleanup = True ):
+def run_rosetta_ddg_monomer( pdb_filename , mut_filename , out_filename = '' , cleanup = True , run = True ):
     root_filename = pdb_filename.rstrip( '.pdb' )
     # hardcoded...ddg_monomer is such a painful protocol...
     out_filename = 'ddg_predictions.out'
@@ -155,17 +155,35 @@ def run_rosetta_ddg_monomer( pdb_filename , mut_filename , out_filename = '' , c
     
     command = create_executable_str( PATH_TO_ROSETTA_DDG_MONOMER , args = [] , options = ddg_monomer_options )
 
-    run_local_commandline( command )
+    if run:
+        run_local_commandline( command )
     
-    # optionally cleanup
-    if cleanup:
-        print 'ddg_monomer writes useless output files, deleting these now...'
-        for i in os.listdir( '.' ):
-            if i == 'wt_traj' or 'mutant_traj' == i[:11]:
-                os.remove( i )
+        # optionally cleanup
+        if cleanup:
+            print 'ddg_monomer writes useless output files, deleting these now...'
+            remove_intermediate_ddg_monomer_files()
         
-    # the only output we need
-    return out_filename
+        # the only output we need
+        return out_filename
+    else:
+        return command , out_filename
+
+# simple helper
+def remove_intermediate_ddg_monomer_files():
+    for i in os.listdir( '.' ):
+        if i == 'wt_traj' or 'mutant_traj' == i[:11]:
+            os.remove( i )
+
+# simple, for now just check if empty or not
+def check_ddg_monomer_output( ddg_monomer_output_filename ):
+    # simple enough, for now just check if empty
+    f = open( ddg_monomer_output_filename , 'r' )
+    success = bool( f.read().strip() )    # load all of this!?
+    f.close()
+    
+    # use the extract method? check if match desired positions?
+    
+    return success
 
 # extract the score terms from the output and setup to match with residue numbers
 def extract_score_terms_from_ddg_monomer( out_filename = 'ddg_predictions.out' , prefix = 'ddG:' ):
@@ -273,7 +291,7 @@ find . -name '%s_[0-9]*[0-9]' | xargs rm
     return relax_options['out:file:silent']
 
 # local
-def run_rosetta_relax_local( pdb_filename , extra_options = {} ):
+def run_rosetta_relax_local( pdb_filename , extra_options = {} , run = True ):
     root_filename = pdb_filename.rstrip( '.pdb' )
     
     # collect the options, set the input, derive the output filenames
@@ -287,25 +305,40 @@ def run_rosetta_relax_local( pdb_filename , extra_options = {} ):
             relax_options[i] = relax_options[i]( root_filename )
 
     # ...weird Rosetta append behavior...
-#    if os.path.isfile( relax_options['out:file:silent'] ):
-#        os.remove( relax_options['out:file:silent'] )
-#    if os.path.isfile( relax_options['out:file:scorefile'] ):
-#        os.remove( relax_options['out:file:scorefile'] )
+    if os.path.isfile( relax_options['out:file:silent'] ):
+        os.remove( relax_options['out:file:silent'] )
+    if os.path.isfile( relax_options['out:file:scorefile'] ):
+        os.remove( relax_options['out:file:scorefile'] )
     
     command = create_executable_str( PATH_TO_ROSETTA_RELAX , args = [] , options = relax_options )
 
-    run_local_commandline( command )
+    if run:
+        run_local_commandline( command )
     
-    # the only output we need
-#    return relax_options['out:file:scorefile']
-    return relax_options['out:file:silent']
+        # the only output we need
+#        return relax_options['out:file:scorefile']
+        return relax_options['out:file:silent']
+    else:
+        return command , relax_options['out:file:silent']
+
+# simple, for now just check if empty or not
+def check_relax_output( relax_score_filename , target_number_of_trajectories = ROSETTA_RELAX_OPTIONS['nstruct'] , header_lines = 1 ):
+    # simple enough, for now just check if empty
+    f = open( relax_score_filename , 'r' )
+    trajectories = len( f.readlines() ) - header_lines
+    f.close()
+    
+    # use the silent file instead? so much bulkier...
+    success = (trajectories == int( target_number_of_trajectories ))
+    
+    return success , trajectories
 
 
 #######
 # SCORE
 
 # added to make sure additional scores are in the output file
-def run_rosetta_rescore( silent_filename , native_filename , score_filename = '' ):
+def run_rosetta_rescore( silent_filename , native_filename , score_filename = '' , run = True ):
     """
     Performs extraction of individual PDB structures from  <silent_filename>
     to  <out_dir>  (default to current location) using the "score" protocol
@@ -330,9 +363,12 @@ def run_rosetta_rescore( silent_filename , native_filename , score_filename = ''
     # default options
     command = create_executable_str( PATH_TO_ROSETTA_SCORE , args = [] , options = score_options )
 
-    run_local_commandline( command )
+    if run:
+        run_local_commandline( command )
     
-    return score_options['out:file:scorefile']
+        return score_options['out:file:scorefile']
+    else:
+        return command , score_options['out:file:scorefile']
 
 
 ####################

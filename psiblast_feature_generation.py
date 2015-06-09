@@ -13,12 +13,13 @@ settings.py in PSIBLAST_OPTIONS
 # IMPORT
 
 # common modules
+import os
 import re
 
 # bigger modules
 
 # custom modules
-from settings import AMINO_ACID_CODES , PATH_TO_PSIBLAST , PSIBLAST_OPTIONS , PROTEIN_LETTERS
+from vipur_settings import AMINO_ACID_CODES , PATH_TO_PSIBLAST , PSIBLAST_OPTIONS , PROTEIN_LETTERS
 from helper_methods import create_executable_str , run_local_commandline
 
 ################################################################################
@@ -98,6 +99,17 @@ def extract_protein_sequence_from_pdb( pdb_filename , out_filename = '' , target
 
     return sequence , residues , out_filename
 
+# need to support this, preprocessing -> run
+def load_numbering_map( numbering_map_filename ):
+    f = open( numbering_map_filename , 'r' )
+    residues = [i.strip( '\n' ).split( '\t' ) for i in f.xreadlines()]
+    f.close()
+    
+    residues = dict( [(i[0] , i[1]) for i in residues] )
+    # make floats? seems like str before anyway
+    
+    return residues
+
 # contingency method used if run in "sequence only" mode
 def load_fasta( fasta_filename ):
     f = open( fasta_filename , 'r' )
@@ -115,7 +127,7 @@ def load_fasta( fasta_filename ):
     return sequences
 
 # local
-def run_psiblast( sequence_filename ):
+def run_psiblast( sequence_filename , run = True ):
     """
     Runs PSIBLAST on  <sequence_filename>  using the default options in
     PSIBLAST_OPTIONS and returns the relevant output file: "out_ascii_pssm"
@@ -132,11 +144,56 @@ def run_psiblast( sequence_filename ):
     
     command = create_executable_str( PATH_TO_PSIBLAST , args = [] , options = psiblast_options )
 
-    run_local_commandline( command )
+    if run:
+        run_local_commandline( command )
     
-    # the only output we need
-    return psiblast_options['out_ascii_pssm']
+        # the only output we need
+        return psiblast_options['out_ascii_pssm']
+    else:
+        # just send the command
+        return command , psiblast_options['out_ascii_pssm']
 
+# simple method, scan for empty/non-existent pssm + if "no hits" were found
+def check_psiblast_output( psiblast_pssm , psiblast_output = None , failed_output_str = 'No hits found' ):
+    # well, if the pssm file is NOT empty, things are good
+    # if it is empty, check the psiblast_output for "No hits found"
+    not_empty = None
+    success = True
+    
+    if os.path.isfile( psiblast_pssm ):
+        f = open( psiblast_pssm , 'r' )
+        not_empty = bool( f.read().strip() )
+        f.close()
+    if not not_empty:
+        # pssm does not exist OR was empty
+        if not os.path.isfile( psiblast_output ):
+            # both files empty or missing
+            success = False
+        else:
+            f = open( psiblast_output , 'r' )
+            lines = f.read()
+            f.close()
+            
+            if failed_output_str.lower() in lines.lower():
+                not_empty = False
+                # but successful, just empty
+            else:
+                # major problems, both failed to generate
+                # OR empty but also not supposed to be, rerun
+                success = False
+            
+#    if not os.path.isfile( psiblast_pssm ):
+#        success = False
+#    else:
+#        f = open( psiblast_pssm , 'r' )
+#        empty = not bool( f.read().strip() )
+#        f.close()
+        
+#        if empty and os.path.isfile( psiblast_output ):
+#            f = open( psiblast_output , 'r' )
+#            empty = bool( failed_output_str.lower() in f.read().lower() )
+#            f.close()
+    return success , not_empty
 
 # modified by njc, hybrid method
 # now robust to versions, based on separator rather than anticipated structure

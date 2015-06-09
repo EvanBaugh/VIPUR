@@ -11,11 +11,11 @@ When setting up VIPUR, make sure you provide all the paths needed
 ################################################################################
 # PATHS
 
-PATH_TO_VIPUR = ''    # remember, this should be blank each push
-PATH_TO_VIPUR_EXECUTABLES = '' #/VIPUR_feature_executables'
+PATH_TO_VIPUR = '/home/evan/VIPUR_pipeline/VIPUR'    # remember, this should be blank each push
+PATH_TO_VIPUR_EXECUTABLES = '/home/evan/VIPUR_pipeline/VIPUR_feature_executables' #/VIPUR_feature_executables'
 
 PATH_TO_PSIBLAST = PATH_TO_VIPUR_EXECUTABLES + '/psiblast_blast+2.2.25'
-PATH_TO_BLAST_DATABASE = ''
+PATH_TO_BLAST_DATABASE = '/home/evan/bio/databases/blast/nr/nr'
 PATH_TO_PROBE = PATH_TO_VIPUR_EXECUTABLES + '/probe'
 
 LICENSE = ''
@@ -171,7 +171,7 @@ ROSETTA_RELAX_OPTIONS = {
     
 #    'parallel' : 40 ,    # a Rosetta option?
     }
-ROSETTA_RELAX_PARALLEL = False#40    # OPTIONS should be reserved for explicit options to Rosetta
+ROSETTA_RELAX_PARALLEL = 40#False    # OPTIONS should be reserved for explicit options to Rosetta
 
 ROSETTA_SCORE_OPTIONS = {
     'database' : PATH_TO_ROSETTA_DATABASE ,
