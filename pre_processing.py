@@ -17,9 +17,12 @@ import sys
 # custom modules
 from helper_methods import load_variants_file , check_variants , extract_chains_from_pdb
 
-from psiblast_feature_generation import extract_protein_sequence_from_pdb , run_psiblast
-from probe_feature_generation import run_probe
-from rosetta_feature_generation import create_variant_protein_structures , write_mut_file , run_rosetta_ddg_monomer , run_rosetta_relax_local , run_rosetta_rescore
+from psiblast_feature_generation import load_fasta , extract_protein_sequence_from_pdb , run_psiblast , load_numbering_map , extract_pssm_from_psiblast_pssm
+from probe_feature_generation import run_probe , extract_accp_from_probe
+from rosetta_feature_generation import create_variant_protein_structures , write_mut_file , run_rosetta_ddg_monomer , run_rosetta_relax_local , run_rosetta_rescore , extract_score_terms_from_ddg_monomer , extract_scores_from_scorefile , extract_quartile_score_terms_from_scorefiles
+from vipur_settings import ROSETTA_RELAX_OPTIONS
+
+from classification import VIPUR_classifier , provide_additional_interpretation
 
 ################################################################################
 # MAIN PREPROCESSING
@@ -27,7 +30,8 @@ from rosetta_feature_generation import create_variant_protein_structures , write
 # prepare commands etc.
 def run_preprocessing( pdb_filename , variants_filename , prediction_filename = '' , out_path = '' ,
         target_chain = '' , sequence_filename = '' , write_numbering_map = True ,
-        sequence_only = False , task_summary_filename = '' ):
+        sequence_only = False , task_summary_filename = '' ,
+        single_relax = False , rosetta_relax_options = ROSETTA_RELAX_OPTIONS ):
     # prepare output writing
     # support writing to  <out_path>
 #    debug_time = [('start' , time.time())]
@@ -37,7 +41,11 @@ def run_preprocessing( pdb_filename , variants_filename , prediction_filename = 
     if not os.path.isfile( variants_filename ):
         raise IOError( 'cannot find ' + variants_filename + '!!!' )
 
-    root_filename = pdb_filename[:-4]    # do this better?
+    if pdb_filename[-4:] == '.pdb':
+        root_filename = pdb_filename[:-4]    # do this better?
+    else:
+        # assume its ".fa" ...
+        root_filename = pdb_filename[:-3]
     if not task_summary_filename:
         task_summary_filename = root_filename + '.task_summary'
 
@@ -74,10 +82,10 @@ def run_preprocessing( pdb_filename , variants_filename , prediction_filename = 
         
         if len( sequence ) > 1:
             print 'multiple sequences found in the input FASTA file,\ncontinuing with just the first entry:\n\t' + sequence[0][0]
-            sequence = sequence[0][1]    # pairs (id , sequence)
+        sequence = sequence[0][1]    # pairs (id , sequence), do this either way
         
         # make a dummy residue map...if this doesn't work, the numbering is off
-        residue_map = dict( [(str( i ) , i) for i in xrange( 1 , len( sequence ) + 1 )] )
+        residue_map = dict( [(str( i ) , i - 1) for i in xrange( 1 , len( sequence ) + 1 )] )
     else:    # the normal protocol
         if not target_chain:    # also support int for index?
             target_chain = extract_chains_from_pdb( pdb_filename )
@@ -92,6 +100,11 @@ def run_preprocessing( pdb_filename , variants_filename , prediction_filename = 
     variants = load_variants_file( variants_filename )
     
     # verify the input variants are proper
+#    print variants
+#    print sequence
+#    if '788' in residue_map.keys():
+#        print residue_map['788']
+#    raw_input('next')
     variants , failed_variants = check_variants( variants , sequence , residue_map )
     if not variants:
         raise IOError( 'none of the variants in \"' + variants_filename + '\" are acceptable!!?!' )
@@ -170,8 +183,41 @@ def run_preprocessing( pdb_filename , variants_filename , prediction_filename = 
         sys.stdout.flush()
 
         # old method, deprecated...but here for testing (for now)
-        native_relax_command , native_relax_filename = run_rosetta_relax_local( pdb_filename , run = False )    # reference for other structures
-        native_score_command , native_score_filename = run_rosetta_rescore( native_relax_filename , native_filename = pdb_filename , run = False )
+        nstruct = rosetta_relax_options['nstruct']
+        jran = rosetta_relax_options['run:jran']
+        native_relax_commands = []
+        if single_relax:
+            native_relax_command , native_relax_filename = run_rosetta_relax_local( pdb_filename , run = False )    # reference for other structures
+
+            native_relax_commands.append( native_relax_command )
+            native_relax_commands.append( native_relax_filename )
+        else:
+            # as separate runs, 1 per nstruct!
+            native_relax_commands = []
+            for j in xrange( nstruct ):
+                extra_options = {
+                    'nstruct' : 1 ,
+                    'run:jran' : jran + j ,
+                    'out:file:silent' : rosetta_relax_options['out:file:silent']( pdb_filename ).replace( '.pdb.silent' , '_' + str( j + 1 ) + '.silent' ) ,
+                    'out:file:scorefile' : rosetta_relax_options['out:file:scorefile']( pdb_filename ).replace( '.pdb.sc' , '_' + str( j + 1 ) + '.sc' )
+                    }
+                native_relax_command , native_relax_filename = run_rosetta_relax_local( pdb_filename , run = False , extra_options = extra_options )
+                
+                    
+                native_relax_commands.append( native_relax_command )
+                native_relax_commands.append( native_relax_filename )
+            #native_relax_command = ';'.join( native_relax_commands )
+        
+        # for records...
+        combined_native_silent_filename = rosetta_relax_options['out:file:silent']( pdb_filename.replace( '.pdb' , '' ) )
+        combined_native_score_filename = rosetta_relax_options['out:file:scorefile']( pdb_filename.replace( '.pdb' , '' ) )
+        
+        #native_score_command , native_score_filename = run_rosetta_rescore( native_relax_filename , native_filename = pdb_filename , run = False )
+        native_score_command , native_score_filename = run_rosetta_rescore( combined_native_silent_filename , native_filename = pdb_filename , run = False )
+
+        native_relax_commands.append( native_score_command )
+        native_relax_commands.append( native_score_filename )
+
         # extract native scores (for reference)
 
     
@@ -186,18 +232,48 @@ def run_preprocessing( pdb_filename , variants_filename , prediction_filename = 
 #            print '[[VIPURLOG]]running Rosetta relax on ' + variant_structure + '...'
             print '[[VIPURLOG]]generating Rosetta relax command on ' + variant_structure + '...'
             sys.stdout.flush()
-            relax_command , relax_filename = run_rosetta_relax_local( variant_structure , run = False )    # old method
+            relax_commands = []
+            if single_relax:
+                relax_command , relax_filename = run_rosetta_relax_local( variant_structure , run = False )    # old method
 #            relax_filename = relax_cmds[i][3]    # the silent file
         
+                relax_commands.append( relax_command )
+                relax_commands.append( relax_filename )
+        
+#            variant_relax[i] = (score_command , score_filename)    # will require relax to be complete first!
+            else:
+                # as separate runs, 1 per nstruct!
+                relax_commands = []
+                for j in xrange( nstruct ):
+                    extra_options = {
+                        'nstruct' : 1 ,
+                        'run:jran' : jran + j ,
+                        'out:file:silent' : rosetta_relax_options['out:file:silent']( variant_structure ).replace( '.pdb.silent' , '_' + str( j + 1 ) + '.silent' ) ,
+                        'out:file:scorefile' : rosetta_relax_options['out:file:scorefile']( variant_structure ).replace( '.pdb.sc' , '_' + str( j + 1 ) + '.sc' )
+                        }
+
+                    relax_command , relax_filename = run_rosetta_relax_local( variant_structure , run = False , extra_options = extra_options )    # old method
+                    
+                    relax_commands.append( relax_command )
+                    relax_commands.append( relax_filename )
+                #relax_command = ';'.join( relax_commands )
+
+
+            combined_silent_filename = rosetta_relax_options['out:file:silent']( variant_structure.replace( '.pdb' , '' ) )
+            variants[i]['combined_silent_filename'] = combined_silent_filename
+            combined_score_filename = rosetta_relax_options['out:file:scorefile']( variant_structure.replace( '.pdb' , '' ) )
+            variants[i]['combined_score_filename'] = combined_score_filename
+
             # additional step, rescore with Rosetta
             # only required to add in 2 scores that SHOULD be output by default with relax
             # whatever, this is the easiest solution, just make an additional call
-            score_command , score_filename = run_rosetta_rescore( relax_filename , native_filename = pdb_filename , run = False )
+            #score_command , score_filename = run_rosetta_rescore( relax_filename , native_filename = pdb_filename , run = False )
+            score_command , score_filename = run_rosetta_rescore( combined_silent_filename , native_filename = pdb_filename , run = False )
 
             # extract features, use the quartile method to extract comparisons
-            variant_relax[i] = (relax_command , relax_filename , score_command , score_filename)
-#            variant_relax[i] = (score_command , score_filename)    # will require relax to be complete first!
-
+#            variant_relax[i] = (relax_command , relax_filename , score_command , score_filename)
+            variant_relax[i] = relax_commands + [score_command , score_filename]
+#            variant_relax[i] = (relax_command , relax_filename , score_command , score_filename)
 
 
     # write out a master summary file
@@ -217,7 +293,7 @@ def run_preprocessing( pdb_filename , variants_filename , prediction_filename = 
     summary_text += 'other| ' + 'target_chain:' + target_chain +','+ 'sequence_only:' + str( sequence_only ) +'\n'    # only these 2 for now...
     summary_text += 'files| ' + 'pdb_filename:' + pdb_filename +','+ 'variants_filename:' + variants_filename +','+ 'prediction_filename:' + prediction_filename +','+ 'sequence_filename:' + sequence_filename
     if write_numbering_map:
-        summary_text += ',numbering_map:' + root_filename +'.numerbing_map'
+        summary_text += ',numbering_map:' + root_filename +'.numbering_map'
     summary_text += '\n'
     # variants
     # well, lets have a record of these
@@ -226,24 +302,49 @@ def run_preprocessing( pdb_filename , variants_filename , prediction_filename = 
 #    print variants
     for i in variants.keys():
         summary_text += 'variant| ' + 'name:' + root_filename +'_'+ i
+        # isn't really needed...for consistency? NO, should not make more complex for no reason...
         if not sequence_only:
             summary_text += ','+ 'structure_filename:' + variants[i]['variant structure filename']
+            summary_text += ','+ 'combined_silent_filename:' + variants[i]['combined_silent_filename']
+            summary_text += ','+ 'combined_score_filename:' + variants[i]['combined_score_filename']
         summary_text += '\n'
 
     # commands
     # psiblast, simplest, for the entire protein
     summary_text += 'command| ' + 'feature:psiblast' +','+ 'output_filename:' + psiblast_filename +','+ psiblast_command +'\n'
-    # probe
-    summary_text += 'command| ' + 'feature:probe' +','+ 'output_filename:' + probe_output_filename +','+ probe_command +'\n'
-    summary_text += 'other| ' + 'probe_positions:' + ';'.join( [str( i ) for i in probe_positions] ) +'\n'
-    # ddg_monomer
-    summary_text += 'command| ' + 'feature:ddg_monomer' +','+ 'output_filename:' + ddg_monomer_out_filename +','+ ddg_monomer_command +'\n'
-    # relax, ugh, these are variant specific
-    summary_text += 'command| ' + 'feature:relax_native' +','+ 'output_filename:' + native_relax_filename +','+ 'variant:native,' + native_relax_command +'\n'
-    summary_text += 'command| ' + 'feature:relax_native_rescore' +','+ 'output_filename:' + native_score_filename +','+ 'variant:native,' + native_score_command +'\n'
-    for i in variant_relax.keys():
-        summary_text += 'command| ' + 'feature:relax' +','+ 'output_filename:' + variant_relax[i][1] +','+ 'variant:' + i +','+ variant_relax[i][0] +'\n'
-        summary_text += 'command| ' + 'feature:relax_rescore' +','+ 'output_filename:' + variant_relax[i][3] +','+ 'variant:' + i +','+ variant_relax[i][2] +'\n'
+    if not sequence_only:
+        # probe
+        summary_text += 'command| ' + 'feature:probe' +','+ 'output_filename:' + probe_output_filename +','+ probe_command +'\n'
+        summary_text += 'other| ' + 'probe_positions:' + ';'.join( [str( i ) for i in probe_positions] ) +'\n'
+        # ddg_monomer
+        summary_text += 'command| ' + 'feature:ddg_monomer' +','+ 'output_filename:' + ddg_monomer_out_filename +','+ ddg_monomer_command +'\n'
+        # relax, ugh, these are variant specific
+
+        if single_relax:
+            summary_text += 'command| ' + 'feature:relax_native' +','+ 'output_filename:' + native_relax_filename +','+ 'variant:native,' + native_relax_command +'\n'
+        else:
+            # run as separate commands
+            for j in xrange( 0 , len( native_relax_commands ) - 2 , 2 ):    # in pairs, skip the last 2, the rescore command
+                summary_text += 'command| ' + 'feature:relax_native' +','+ 'output_filename:' + native_relax_commands[j + 1] +','+ 'variant:native,' + native_relax_commands[j] +'\n'
+        #summary_text += 'command| ' + 'feature:relax_native' +','+ 'output_filename:' + native_relax_filename +','+ 'variant:native,' + native_relax_command +'\n'
+        summary_text += 'other| ' + 'combined_native_silent_filename:' + combined_native_silent_filename +'\n'
+        summary_text += 'other| ' + 'combined_native_score_filename:' + combined_native_score_filename +'\n'
+    
+        #summary_text += 'command| ' + 'feature:relax_native_rescore' +','+ 'output_filename:' + native_score_filename +','+ 'variant:native,' + native_score_command +'\n'
+        summary_text += 'command| ' + 'feature:relax_native_rescore' +','+ 'output_filename:' + native_relax_commands[-1] +','+ 'variant:native,' + native_relax_commands[-2] +'\n'
+        #summary_text += 'command| ' + 'feature:relax_native_rescore' +','+ 'output_filename:' + native_score_filename +','+ 'variant:native,' + native_score_command +'\n'
+
+        for i in variant_relax.keys():
+            if len( variant_relax[i] ) == 4:
+                # run as a batch
+                summary_text += 'command| ' + 'feature:relax' +','+ 'output_filename:' + variant_relax[i][1] +','+ 'variant:' + i +','+ variant_relax[i][0] +'\n'
+            else:
+                # run as separate commands
+                for j in xrange( 0 , len( variant_relax[i] ) - 2 , 2 ):    # in pairs, skip the last 2, the rescore command
+                    summary_text += 'command| ' + 'feature:relax' +','+ 'output_filename:' + variant_relax[i][j + 1] +','+ 'variant:' + i +','+ variant_relax[i][j] +'\n'
+
+            #summary_text += 'command| ' + 'feature:relax' +','+ 'output_filename:' + variant_relax[i][1] +','+ 'variant:' + i +','+ variant_relax[i][0] +'\n'
+            summary_text += 'command| ' + 'feature:relax_rescore' +','+ 'output_filename:' + variant_relax[i][-1] +','+ 'variant:' + i +','+ variant_relax[i][-2] +'\n'
 
 #    print summary_text.rstrip( '\n' )
     print '[[VIPURLOG]]writing task summary file to ' + task_summary_filename
@@ -280,6 +381,7 @@ def load_task_summary( task_summary_filename ):
     variants = {}
     commands = []
     for i in lines:
+#        print i
         if i[0] == 'root_filename':
             root_filename = i[1].strip()
         elif i[0] == 'out_path':
@@ -350,7 +452,8 @@ def write_task_summary( task_summary , task_summary_filename ):
 
     summary_text += 'files| ' + ','.join( [i +':'+ task_summary['filenames'][i] for i in task_summary['filenames'].keys()] ) +'\n'
     for i in task_summary['variants'].keys():
-        summary_text += 'variant| ' + 'name:' + task_summary['variants'][i]['name'] +','+ ','.join( [j +':'+ task_summary['variants'][i][j] for j in task_summary['variants'][i].keys() if not j == 'name'] ) +'\n'
+        # only add bridging "," if >1 keys
+        summary_text += 'variant| ' + 'name:' + task_summary['variants'][i]['name'] +','*bool( len( task_summary['variants'][i] ) > 1 )+ ','.join( [j +':'+ task_summary['variants'][i][j] for j in task_summary['variants'][i].keys() if not j == 'name'] ) +'\n'
     for i in task_summary['commands']:
         summary_text += 'command| ' + ','.join( [j +':'+ i[j] for j in i.keys() if not j =='command'] ) +','+ i['command'] +'\n'
 
@@ -360,20 +463,5 @@ def write_task_summary( task_summary , task_summary_filename ):
     f.close()
 
 #    return summary_text
-
-
-
-
-def run_postprocessing( task_summary_filename ):
-    # load the tasks
-    if isinstance( task_summary_filename , str ) and os.path.isfile( task_summary_filename ):
-        task_summary = load_task_summary( task_summary_filename )
-    else:
-        # input is what we want
-        task_summary = task_summary_filename
-    
-    # extract the features
-    # run the classifier
-    None
 
 

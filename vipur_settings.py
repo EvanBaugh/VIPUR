@@ -30,11 +30,14 @@ PATH_TO_PYMOL = 'pymol'
 
 # check for PyRosetta, used for making mutant structures
 USE_PYROSETTA = False
-try:
-    from rosetta import init
-    init()
-    USE_PYROSETTA = True
-except:
+if USE_PYROSETTA:
+    try:
+        from rosetta import init
+        init()
+        USE_PYROSETTA = True
+    except:
+        None
+if not USE_PYROSETTA:
     # anything in response?
     if not PATH_TO_PYMOL:
         raise IOError( 'please edit settings.py to include your PATH_TO_PYMOL' )

@@ -137,9 +137,12 @@ def write_mut_file( variants , residue_map , mut_filename ):
 
 # local
 def run_rosetta_ddg_monomer( pdb_filename , mut_filename , out_filename = '' , cleanup = True , run = True ):
-    root_filename = pdb_filename.rstrip( '.pdb' )
+    root_filename = os.path.abspath( pdb_filename ).rstrip( '.pdb' )
     # hardcoded...ddg_monomer is such a painful protocol...
-    out_filename = 'ddg_predictions.out'
+    out_filename = ''
+    if '/' in root_filename:
+        out_filename += '/'.join( root_filename.split( '/' )[:-1] ) +'/'
+    out_filename += 'ddg_predictions.out'
     # clear it out if it exists, otherwise it will be appended to...
     if os.path.exists( out_filename ):
         os.remove( out_filename )
@@ -152,6 +155,10 @@ def run_rosetta_ddg_monomer( pdb_filename , mut_filename , out_filename = '' , c
     for i in ddg_monomer_options.keys():
         if '__call__' in dir( ddg_monomer_options[i] ):
             ddg_monomer_options[i] = ddg_monomer_options[i]( root_filename )
+
+    for i in ddg_monomer_options.keys():
+        if isinstance( ddg_monomer_options[i] , str ) and os.path.isfile( ddg_monomer_options[i] ):
+            ddg_monomer_options[i] = os.path.abspath( ddg_monomer_options[i] )
     
     command = create_executable_str( PATH_TO_ROSETTA_DDG_MONOMER , args = [] , options = ddg_monomer_options )
 
@@ -292,7 +299,7 @@ find . -name '%s_[0-9]*[0-9]' | xargs rm
 
 # local
 def run_rosetta_relax_local( pdb_filename , extra_options = {} , run = True ):
-    root_filename = pdb_filename.rstrip( '.pdb' )
+    root_filename = os.path.abspath( pdb_filename ).replace( '.pdb' , '' )
     
     # collect the options, set the input, derive the output filenames
     relax_options = {}
@@ -303,6 +310,10 @@ def run_rosetta_relax_local( pdb_filename , extra_options = {} , run = True ):
     for i in relax_options.keys():
         if '__call__' in dir( relax_options[i] ):
             relax_options[i] = relax_options[i]( root_filename )
+
+    for i in relax_options.keys():
+        if isinstance( relax_options[i] , str ) and os.path.isfile( relax_options[i] ):
+            relax_options[i] = os.path.abspath( relax_options[i] )
 
     # ...weird Rosetta append behavior...
     if os.path.isfile( relax_options['out:file:silent'] ):
@@ -322,16 +333,70 @@ def run_rosetta_relax_local( pdb_filename , extra_options = {} , run = True ):
         return command , relax_options['out:file:silent']
 
 # simple, for now just check if empty or not
-def check_relax_output( relax_score_filename , target_number_of_trajectories = ROSETTA_RELAX_OPTIONS['nstruct'] , header_lines = 1 ):
+def check_relax_output( relax_score_filename , target_number_of_trajectories = ROSETTA_RELAX_OPTIONS['nstruct'] , header_lines = 1 , single_relax = False ):
     # simple enough, for now just check if empty
     f = open( relax_score_filename , 'r' )
     trajectories = len( f.readlines() ) - header_lines
     f.close()
     
+    # optionally split into individual jobs
+    if not single_relax:
+        target_number_of_trajectories = 1
+    
     # use the silent file instead? so much bulkier...
     success = (trajectories == int( target_number_of_trajectories ))
     
     return success , trajectories
+
+# crude crude method
+def merge_rosetta_relax_output( silent_filenames , combined_silent_filename , score_filenames , combined_score_filename , delete_old_files = False ):
+    # ??? just combine all the text
+    text = ''
+    for i in silent_filenames:
+        f = open( i , 'r' )
+        new_text = f.read()
+        f.close()
+        
+        if text and not text[-1] == '\n':
+            text += '\n'
+
+        text += new_text
+
+    f = open( combined_silent_filename , 'w' )
+    f.write( text )
+    f.close()
+    
+    # optionally delete the old files
+    if delete_old_files:
+        for i in silent_filenames:
+            os.remove( i )    # should all be abspath files...
+
+    text = ''
+    for i in score_filenames:
+        f = open( i , 'r' )
+#        new_text = f.read()
+        new_text = f.readlines()
+        f.close()
+        
+        # remove headers, unless its the first one
+        if text:
+            new_text = new_text[1:]
+        new_text = ''.join( new_text )
+        
+        # 'glue' with newlines
+        if text and not text[-1] == '\n':
+            text += '\n'
+
+        text += new_text
+
+    f = open( combined_score_filename , 'w' )
+    f.write( text )
+    f.close()
+
+    # optionally delete the old files
+    if delete_old_files:
+        for i in score_filenames:
+            os.remove( i )    # should all be abspath files...
 
 
 #######
@@ -346,7 +411,7 @@ def run_rosetta_rescore( silent_filename , native_filename , score_filename = ''
     
     Optionally specify  <extra_options>
     """
-    root_filename = silent_filename.rstrip( '.silent' )
+    root_filename = os.path.abspath( silent_filename ).rstrip( '.silent' )
     
     score_options = {}
     score_options.update( ROSETTA_SCORE_OPTIONS )
@@ -355,6 +420,14 @@ def run_rosetta_rescore( silent_filename , native_filename , score_filename = ''
     for i in score_options.keys():
         if '__call__' in dir( score_options[i] ):
             score_options[i] = score_options[i]( root_filename )
+
+    # necessary...
+    if 'out:file:scorefile' in score_options.keys() and not 'rescore.sc' in score_options['out:file:scorefile']:
+        score_options['out:file:scorefile'] = score_options['out:file:scorefile'].replace( '.sc' , '_rescore.sc' )
+
+    for i in score_options.keys():
+        if isinstance( score_options[i] , str ) and os.path.isfile( score_options[i] ):
+            score_options[i] = os.path.abspath( score_options[i] )
 
     # ...weird Rosetta append behavior...
     if os.path.isfile( score_options['out:file:scorefile'] ):

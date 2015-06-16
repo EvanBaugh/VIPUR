@@ -337,8 +337,8 @@ performance is using structures that have not been pre-relaxed
 """
 
 # personal, for debugging, ensure local paths
-import sys
-sys.path = [i for i in sys.path if not '/home/evan/bio/' in i]
+#import sys
+#sys.path = [i for i in sys.path if not '/home/evan/bio/' in i]
 
 ################################################################################
 # IMPORT
@@ -350,7 +350,7 @@ import optparse
 # bigger modules
 
 # custom modules
-from run_methods import run_VIPUR_deprecated , run_VIPUR_parallel , run_VIPUR_in_stages
+from run_methods import run_VIPUR_deprecated , run_VIPUR_parallel , run_VIPUR_in_stages , run_VIPUR_serially
 
 ################################################################################
 # MAIN
@@ -421,6 +421,16 @@ if __name__ == '__main__':
     sequence_only = bool( options.sequence_only )
     demo = bool( options.demo )
 
+
+    run_VIPUR_serially( pdb_filename = pdb_filename , variants_filename = variants_filename ,
+        out_path = out_path , write_numbering_map = write_numbering_map ,
+        single_relax = False , delete_intermediate_relax_files = True ,
+        demo = demo )
+
+#    quit()
+
+
+"""
     # for the example input
     if demo:
         pdb_filename = PATH_TO_VIPUR + '/example_input/2C35.pdb'
@@ -432,11 +442,16 @@ if __name__ == '__main__':
 
     # alternatively, run on an entire directory
     if not pdb_filename and not variants_filename:
+        # current directory
         print 'no input provided, assuming you want to run on every (.pdb,.txt) file pair found in the current directory'
         pdb_filename = os.getcwd()
+
     if os.path.isdir( pdb_filename ) and not variants_filename:
+        # assume variants_filename from pdb_filename
         variants_filename = '.txt'
+
     if os.path.isdir( pdb_filename ) and variants_filename[0] == '.':
+        # look for file extension
         # instead, run on the directory
         print 'running VIPUR on all (.pdb,' + variants_filename + ') file pairs found in ' + pdb_filename
         # find .pdb files
@@ -448,17 +463,23 @@ if __name__ == '__main__':
         print str( len( pdb_filenames ) ) + ' pairs found'
         if not pdb_filenames:
             raise IOError( '!!! no (.pdb,' + variants_filename + ') file pairs found in ' + pdb_filename + '!!?!' )
+
+    else:
+        # normal execution, generalize by turning into list
+        pdb_filenames = [[pdb_filename , variants_filename]]
         
-        # run them all
-        for i in pdb_filenames:
-            # assume all other values are defauls
-#            run_VIPUR_parallel( i[0] , i[1] )
-#            run_VIPUR_deprecated( i[0] , i[1] )
-#            run_preprocessing( i[0] , i[1] )
-            run_VIPUR_in_stages( i[0] , i[1] )
-        
-        exit()    # so it does not error-out after the loop
-    
+    # run them all
+    for i in pdb_filenames:
+        # assume all other values are defauls
+#        run_VIPUR_parallel( i[0] , i[1] )
+#        run_VIPUR_deprecated( i[0] , i[1] )
+#        run_preprocessing( i[0] , i[1] )
+#        run_VIPUR_in_stages( i[0] , i[1] )
+        run_VIPUR_in_stages( i[0] , i[1] ,
+            prediction_filename = prediction_filename , out_path = out_path ,
+            target_chain = target_chain , write_numbering_map = write_numbering_map ,
+            sequence_only = sequence_only )
+
         
 #    run_VIPUR_parallel( pdb_filename , variants_filename ,
 #        prediction_filename = prediction_filename , out_path = out_path ,
@@ -472,9 +493,10 @@ if __name__ == '__main__':
 #        prediction_filename = prediction_filename , out_path = out_path ,
 #        target_chain = target_chain , write_numbering_map = write_numbering_map ,
 #        sequence_only = sequence_only )
-    run_VIPUR_in_stages( pdb_filename , variants_filename ,
-        prediction_filename = prediction_filename , out_path = out_path ,
-        target_chain = target_chain , write_numbering_map = write_numbering_map ,
-        sequence_only = sequence_only )
+#    run_VIPUR_in_stages( pdb_filename , variants_filename ,
+#        prediction_filename = prediction_filename , out_path = out_path ,
+#        target_chain = target_chain , write_numbering_map = write_numbering_map ,
+#        sequence_only = sequence_only )
+"""
 
 

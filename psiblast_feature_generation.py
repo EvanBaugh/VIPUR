@@ -132,7 +132,7 @@ def run_psiblast( sequence_filename , run = True ):
     Runs PSIBLAST on  <sequence_filename>  using the default options in
     PSIBLAST_OPTIONS and returns the relevant output file: "out_ascii_pssm"
     """
-    root_filename = sequence_filename.rstrip( '.fa' )
+    root_filename = os.path.abspath( sequence_filename ).rstrip( '.fa' )
     
     # collect the options, set the input, derive the output filenames
     psiblast_options = {}
@@ -141,6 +141,10 @@ def run_psiblast( sequence_filename , run = True ):
     for i in psiblast_options.keys():
         if '__call__' in dir( psiblast_options[i] ):
             psiblast_options[i] = psiblast_options[i]( root_filename )
+
+    for i in psiblast_options.keys():
+        if isinstance( psiblast_options[i] , str ) and os.path.isfile( psiblast_options[i] ):
+            psiblast_options[i] = os.path.abspath( psiblast_options[i] )
     
     command = create_executable_str( PATH_TO_PSIBLAST , args = [] , options = psiblast_options )
 

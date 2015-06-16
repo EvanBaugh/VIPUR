@@ -15,6 +15,7 @@ settings.py in PROBE_OPTIONS
 # IMPORT
 
 # common modules
+import os
 
 # bigger modules
 
@@ -33,7 +34,7 @@ def run_probe( pdb_filename , variants , probe_output_filename = '' , run = True
     <probe_output_filename>  (also returns this output filename)
     """
     if not probe_output_filename:
-        probe_output_filename = pdb_filename.rstrip( '.pdb' ) + '.probe_out'
+        probe_output_filename = os.path.abspath( pdb_filename ).rstrip( '.pdb' ) + '.probe_out'
 
     # get the unique variant positions
     positions = list( set( [i[1:-1] for i in variants] ) )

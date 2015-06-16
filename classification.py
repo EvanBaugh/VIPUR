@@ -151,7 +151,7 @@ class LogisticRegressionClassifier():
         return summary
 
     # classify it AND summarize the output plz
-    def summarize_classification( self , input_vector , base = math.e , rescale = None ):
+    def summarize_classification( self , input_vector , base = math.e , rescale = None , old_display = False ):
         if rescale == None:
             rescale = self.rescale
         scale = 1
@@ -170,16 +170,20 @@ class LogisticRegressionClassifier():
         positive = [(terms[i]/scale , descriptions[i]) for i in ranked if abs( terms[i] ) > 1e-7 and terms[i] >= 0]
         negative = [(terms[i]/scale , descriptions[i]) for i in ranked if abs( terms[i] ) > 1e-7 and terms[i] < 0]
 
-        # hmmm...display
-        print '='*3 + ' deleterious ' + '='*3
-        text = ''
-        for i in positive:
-            print i[1].ljust( 30 ) + str( i[0] )
-#        print '='*10 +' '+ str( self.bias/scale ) +' '+ '='*10 +' '+ str( summary['score'] )
-        print '='*10 +' '+ str( summary['score'] ) +' '+ '='*10 +' '+ str( summary['label'] ) +', '+ str( summary['P'] )
-        for i in negative:
-            print i[1].ljust( 30 ) + str( i[0] )
-        print '='*3 + ' neutral ' + '='*3
+
+        if not old_display:
+            print summary['label'] +', '+ str( summary['P'] ) + ' confidence'
+        else:
+            # hmmm...display
+            print '='*3 + ' deleterious ' + '='*3
+            text = ''
+            for i in positive:
+                print i[1].ljust( 30 ) + str( i[0] )
+#            print '='*10 +' '+ str( self.bias/scale ) +' '+ '='*10 +' '+ str( summary['score'] )
+            print '='*10 +' '+ str( summary['score'] ) +' '+ '='*10 +' '+ str( summary['label'] ) +', '+ str( summary['P'] )
+            for i in negative:
+                print i[1].ljust( 30 ) + str( i[0] )
+            print '='*3 + ' neutral ' + '='*3
     
         return summary
 
