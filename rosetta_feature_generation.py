@@ -119,7 +119,6 @@ def write_mut_file( variants , residue_map , mut_filename ):
     # must split by positions
         
     for i in variants:
-#        text += str( len( i ) ) +'\n'
         text += '1\n'    # hardcoded for now...
         pdb_position = i[1:-1]
         # 1-indexed, not 0-indexed
@@ -199,8 +198,6 @@ def extract_score_terms_from_ddg_monomer( out_filename = 'ddg_predictions.out' ,
     f.close()
     
     parse_ddg_monomer_line = lambda line : [i.strip() for i in line.lstrip( prefix ).split( ' ' ) if i.strip()]
-#    header = parse_ddg_monomer_line( lines[0] )
-#    header = ['ddg_' + i  if not i == 'description' else  i for i in parse_ddg_monomer_line( lines[0] )]
     # added "ddg_" for legacy compatability, is artibrary, make more informative
 
     ddg_monomer_dict = [parse_ddg_monomer_line( i ) for i in lines]
@@ -327,7 +324,6 @@ def run_rosetta_relax_local( pdb_filename , extra_options = {} , run = True ):
         run_local_commandline( command )
     
         # the only output we need
-#        return relax_options['out:file:scorefile']
         return relax_options['out:file:silent']
     else:
         return command , relax_options['out:file:silent']
@@ -374,7 +370,6 @@ def merge_rosetta_relax_output( silent_filenames , combined_silent_filename , sc
     text = ''
     for i in score_filenames:
         f = open( i , 'r' )
-#        new_text = f.read()
         new_text = f.readlines()
         f.close()
         
@@ -457,7 +452,6 @@ def extract_scores_from_scorefile( scorefilename , header = 0 , hit = 'SCORE: ' 
     # find the score terms, as dict for easier parsing
     score_terms = [i.strip() for i in lines[header].replace( hit , '' ).split( ' ' ) if i.strip()]
     scores = dict( [(i , []) for i in score_terms] )
-#    print score_terms
 
     # load the terms on each line
     for i in lines[header + 1:]:
@@ -558,17 +552,10 @@ def extract_quartile_score_terms_from_scorefiles( variant_distribution , native_
     
     for term in terms:
         for quartile in quartiles.keys():
-#            feature_name = term +'_'+ quartile
             # using the legacy names of these features
             # rename these to be less cumbersome
             feature_name = 'quartile_' + term + quartile
             quartile_comparisons[feature_name] = determine_quartile_from_quartile_value_of_another_distribution( quartiles[quartile] , variant_distribution[term] , native_distribution[term] )
-
-#            if term == 'gdtmm1_1':
-#                print quartiles[quartile]
-#                quartile_value = determine_quartile_value( quartiles[quartile] , variant_distribution[term] )    
-#                quartile = determine_quartile( quartile_value , native_distribution[term] )
-#                print quartile_value , quartile
 
     return quartile_comparisons
 

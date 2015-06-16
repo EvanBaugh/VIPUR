@@ -66,7 +66,6 @@ def extract_protein_sequence_from_pdb( pdb_filename , out_filename = '' , target
             # a new residue, add the amino acid
             sequence += AMINO_ACID_CODES[i[17:20]]
             residues.append( resi )
-#            print resi
             last_resi = resi
     
     print 'extracted protein sequence from ' + pdb_filename + ' chain ' + target_chain
@@ -186,17 +185,6 @@ def check_psiblast_output( psiblast_pssm , psiblast_output = None , failed_outpu
                 # OR empty but also not supposed to be, rerun
                 success = False
             
-#    if not os.path.isfile( psiblast_pssm ):
-#        success = False
-#    else:
-#        f = open( psiblast_pssm , 'r' )
-#        empty = not bool( f.read().strip() )
-#        f.close()
-        
-#        if empty and os.path.isfile( psiblast_output ):
-#            f = open( psiblast_output , 'r' )
-#            empty = bool( failed_output_str.lower() in f.read().lower() )
-#            f.close()
     return success , not_empty
 
 # modified by njc, hybrid method

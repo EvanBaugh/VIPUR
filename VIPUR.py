@@ -350,7 +350,7 @@ import optparse
 # bigger modules
 
 # custom modules
-from run_methods import run_VIPUR_deprecated , run_VIPUR_parallel , run_VIPUR_in_stages , run_VIPUR_serially
+from run_methods import run_VIPUR_serially #, run_VIPUR_deprecated , run_VIPUR_parallel , run_VIPUR_in_stages
 
 ################################################################################
 # MAIN

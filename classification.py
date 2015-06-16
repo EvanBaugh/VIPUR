@@ -101,9 +101,6 @@ class LogisticRegressionClassifier():
             scale = self.scale
 
         text = 'bias'.ljust( 30 ) + str( self.bias/scale )
-#        print self.description
-#        print self.weights
-#        print len( self.description ) , len( self.weights )
         for i in self.relevant_indices:
             text += '\n'+ self.description[i].ljust( 30 ) + str( self.weights[i]/scale )
         
@@ -116,7 +113,6 @@ class LogisticRegressionClassifier():
     def reorder_input_vector( self , input_vector ):
         if isinstance( input_vector , dict ):
             # for now, assume it will work, however fragile this is
-#            input_vector = [float( input_vector[i] ) for i in self.description]
             input_vector = [float( input_vector[i] )  if i in input_vector.keys() else  0 for i in self.description]
         return input_vector
     
@@ -133,7 +129,6 @@ class LogisticRegressionClassifier():
         # normalize the input vector
         # ...can save a bunch of useless computation
         # no need to even do this outside "relevant_indices"
-#        input_vector = [(input_vector[i] - self.means[i])*self.stds[i]  if i in self.relevant_indices else  0 for i in xrange( len( input_vector ) )]
         if normalize:
             input_vector = self.normalize_input( input_vector )
     
@@ -179,7 +174,6 @@ class LogisticRegressionClassifier():
             text = ''
             for i in positive:
                 print i[1].ljust( 30 ) + str( i[0] )
-#            print '='*10 +' '+ str( self.bias/scale ) +' '+ '='*10 +' '+ str( summary['score'] )
             print '='*10 +' '+ str( summary['score'] ) +' '+ '='*10 +' '+ str( summary['label'] ) +', '+ str( summary['P'] )
             for i in negative:
                 print i[1].ljust( 30 ) + str( i[0] )
@@ -211,14 +205,6 @@ class VIPURClassifier():
         self.rescale = rescale
         
         self.top_features = top_features
-
-    # not currently supported
-#    def reorder_input_vector( self , input_vector ):
-#        if isinstance( input_vector , dict ):
-            # for now, assume it will work, however fragile this is
-#            input_vector = [float( input_vector[i] ) for i in self.description]
-#            input_vector = [float( input_vector[i] )  if i in input_vector.keys() else  0 for i in self.description]
-#        return input_vector
     
     # classify it AND summarize the output plz
     def combined_classification( self , input_vector , base = math.e , rescale = None ):
@@ -227,10 +213,6 @@ class VIPURClassifier():
         scale = 1
         if rescale:
             scale = self.scale
-
-        # not currently supported
-#        if isinstance( input_vector , dict ):
-#            input_vector = self.reorder_input_vector( input_vector )
         
         # support sequence only classification?
         
@@ -247,10 +229,6 @@ class VIPURClassifier():
         scale = self.scale    # for now
         if not top_features:
             top_features = self.top_features
-
-        # not currently supported
-#        if isinstance( input_vector , dict ):
-#            input_vector = self.reorder_input_vector( input_vector )
 
         # make the predictions
         # ...redundant with the above method...
@@ -297,7 +275,6 @@ class VIPURClassifier():
         
         combined_prediction['explanation'] = ['appears neutral']
         if combined_prediction['label'] == 'deleterious':
-#            combined_prediction['explanation'] = [deleterious_description[positive[i][1]] for i in  if not 'bias' in positive[i][1]]
             combined_prediction['explanation'] = [deleterious_description[i[1]] + ' [' + i[1] +']' for i in positive if not 'bias' in i[1] and not i[1] in skip_during_explanation][:top_features]
 
         # present the details
@@ -307,7 +284,6 @@ class VIPURClassifier():
             if 'explanation' in combined_prediction.keys():
                 for i in combined_prediction['explanation']:
                     print '\t'+ i
-#            print '='*10
             print    # for interactive display
 
         return combined_prediction

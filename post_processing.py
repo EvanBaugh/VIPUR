@@ -42,7 +42,6 @@ def run_postprocessing( task_summary_filename , sequence_only = False ):
     residue_map = {}
     if 'numbering_map' in task_summary['filenames'].keys():
         filename = task_summary['out_path'] +'/'+ task_summary['filenames']['numbering_map']
-        #print filename , os.path.isfile( filename )
         residue_map = load_numbering_map( filename )
     
     
@@ -56,7 +55,6 @@ def run_postprocessing( task_summary_filename , sequence_only = False ):
     if not psiblast_task or not 'run' in psiblast_task[0].keys() or not 'success' in psiblast_task[0]['run']:
         raise Exception( 'psiblast did not complete successfully!!!' )
 
-#    pssm = extract_pssm_from_psiblast_pssm( task_summary['out_path'] +'/'+ psiblast_task[0]['output_filename'] )
     pssm = extract_pssm_from_psiblast_pssm( psiblast_task[0]['output_filename'] )
     if not residue_map:
         residue_map = dict( [(str( i ) , str( i )) for i in pssm.keys()] )
@@ -89,7 +87,6 @@ def run_postprocessing( task_summary_filename , sequence_only = False ):
         positions = task_summary['other']['probe_positions']
         
         # extract the PROBE feature
-#        accp = extract_accp_from_probe( task_summary['out_path'] +'/'+ probe_task[0]['output_filename'] )
         accp = extract_accp_from_probe( probe_task[0]['output_filename'] )
         # positions is a parallel list of positions
         accp_dict = dict( [(positions[i] , accp[i]) for i in xrange( len( accp ) )] )
@@ -107,7 +104,6 @@ def run_postprocessing( task_summary_filename , sequence_only = False ):
         ddg_monomer_task = [i for i in task_summary['commands'] if i['feature'] == 'ddg_monomer']
         if not ddg_monomer_task or not 'run' in ddg_monomer_task[0].keys() or not 'success' in ddg_monomer_task[0]['run']:
             raise Exception( 'ddg_monomer did not complete successfully!!!' )
-#        ddg_monomer_dict = extract_score_terms_from_ddg_monomer( out_filename = task_summary['out_path'] +'/'+ ddg_monomer_task[0]['output_filename'] )
         ddg_monomer_dict = extract_score_terms_from_ddg_monomer( out_filename = ddg_monomer_task[0]['output_filename'] )
         # the residues from this will be "pose numbered", need to map back to the PDB numbering
         header = ddg_monomer_dict['description']
@@ -124,10 +120,8 @@ def run_postprocessing( task_summary_filename , sequence_only = False ):
         # relax
         # get native relax reference scores
         native_task = [i for i in task_summary['commands'] if i['feature'] == 'relax_native_rescore']# and i['variant'] == 'native']
-#        print native_task
         if not native_task or not 'run' in native_task[0].keys() or not 'success' in native_task[0]['run']:
             raise Exception( 'relax for the native structure reference did not complete successfully!!!' )
-#        native_scorefile_dict = extract_scores_from_scorefile( task_summary['out_path'] +'/'+ native_task[0]['output_filename'] )    # save time, only parse this once
         native_scorefile_dict = extract_scores_from_scorefile( native_task[0]['output_filename'] )    # save time, only parse this once
         
         for i in task_summary['variants'].keys():
@@ -149,9 +143,6 @@ def run_postprocessing( task_summary_filename , sequence_only = False ):
             # between the native and variant score distributions
             quartile_scores = extract_quartile_score_terms_from_scorefiles( rescore_task[0]['output_filename'] , native_scorefile_dict )
             # make sure there is not overlap
-#            print task_summary['variants']
-#            print task_summary['variants'][i]
-#            print task_summary['variants'][i]['features']
             overlaps = [j for j in quartile_scores.keys() if j in task_summary['variants'][i]['features'].keys()]
             if overlaps:
                 raise IOError( '!!?! somehow your scorefile has score terms that match the name(s) of features that already exist!!?! something has gone horribly wrong...' + str( overlaps ) )
@@ -176,7 +167,6 @@ def run_postprocessing( task_summary_filename , sequence_only = False ):
         if sequence_only:
             # just the sequence only classifier
             # standardize output, add in empty values
-#            interpretation = VIPUR_classifier.sequence_classifier.classify_instance( task_summary['variants'][i]['features'] )
             interpretation = VIPUR_classifier.sequence_classifier.summarize_classification( task_summary['variants'][i]['features'] )
             interpretation['structure label'] = 'NA'
             interpretation['structure P'] = 'NA'
@@ -228,15 +218,10 @@ def run_postprocessing( task_summary_filename , sequence_only = False ):
     f = open( prediction_filename , 'w' )
     # very shameful, hardcoded indices again...
     temp = predictions.values()
-#    print temp[0]
-#    print [i.split( '\t' )[:5] for i in temp]
     temp = sorted( temp , key = lambda x : 1/(float( x.split( '\t' )[2] ) + 1e-7) )    # make sure no /0
     f.write( '\t'.join( PREDICTION_OUTPUT_HEADER ) +'\n'+ '\n'.join( temp ) )
     f.close()
 
-    # debug putput
-#    print variants
-    
     # debug analyze time
 #    for i in xrange( len( debug_time ) - 1 ):
 #        dt = debug_time[i + 1][1] - debug_time[i][1]
