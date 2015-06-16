@@ -243,30 +243,37 @@ def run_VIPUR_serially( pdb_filename = '' , variants_filename = '' ,
         else:
             fa_filenames = [[]]
 
+    # combine all "filenames" to run into unified framework
+    target_proteins = []#None]*(len( pdb_filenames ) + len( fa_filenames ))
+    for i in pdb_filenames:
+        target_proteins.append( i + [False , out_path] )
+    for i in fa_filenames:
+        target_proteins.append( i + [True , out_path] )
 
     # pre processing
     task_summaries = []
-    for i in pdb_filenames:
+    for i in target_proteins:
         task_summary_filename = run_preprocessing( i[0] , i[1] ,
-            out_path = out_path , write_numbering_map = write_numbering_map ,
-            single_relax = single_relax )
+            sequence_only = i[2] , out_path = i[3] ,
+            write_numbering_map = write_numbering_map , single_relax = single_relax )
 
         task_summaries.append( task_summary_filename )
 
     # "sequence_only"
-    sequence_task_summaries = []
-    for i in fa_filenames:
-        task_summary_filename = run_preprocessing( i[0] , i[1] ,
-            out_path = out_path , write_numbering_map = write_numbering_map ,
-            single_relax = single_relax , sequence_only = True )
+#    sequence_task_summaries = []
+#    for i in fa_filenames:
+#        task_summary_filename = run_preprocessing( i[0] , i[1] ,
+#            out_path = out_path , write_numbering_map = write_numbering_map ,
+#            single_relax = single_relax , sequence_only = True )
 
-        sequence_task_summaries.append( task_summary_filename )
+#        sequence_task_summaries.append( task_summary_filename )
 
     # run them all
     for i in xrange( len( task_summaries ) ):
         task_summaries[i] = run_tasks_locally( task_summaries[i] , single_relax = single_relax , delete_intermediate_relax_files = delete_intermediate_relax_files )
-    for i in xrange( len( sequence_task_summaries ) ):
-        sequence_task_summaries[i] = run_tasks_locally( sequence_task_summaries[i] )    # those extra options are irrelevant
+        # works for both full and sequence only
+#    for i in xrange( len( sequence_task_summaries ) ):
+#        sequence_task_summaries[i] = run_tasks_locally( sequence_task_summaries[i] )    # those extra options are irrelevant
         
 #    run_VIPUR_parallel( pdb_filename , variants_filename ,
 #        prediction_filename = prediction_filename , out_path = out_path ,
@@ -287,9 +294,10 @@ def run_VIPUR_serially( pdb_filename = '' , variants_filename = '' ,
 
     # post processing
     for i in xrange( len( task_summaries ) ):
-        task_summaries[i] = run_postprocessing( task_summaries[i] )
-    for i in xrange( len( sequence_task_summaries ) ):
-        sequence_task_summaries[i] = run_postprocessing( sequence_task_summaries[i] , sequence_only = True )
+        sequence_only = target_proteins[i][2]
+        task_summaries[i] = run_postprocessing( task_summaries[i] , sequence_only = sequence_only )
+#    for i in xrange( len( sequence_task_summaries ) ):
+#        sequence_task_summaries[i] = run_postprocessing( sequence_task_summaries[i] , sequence_only = True )
 
     task_summaries = task_summaries + sequence_task_summaries
 

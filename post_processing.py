@@ -49,13 +49,40 @@ def run_postprocessing( task_summary_filename , sequence_only = False ):
     
     # determine the "aminochange" values
     evaluate_aminochange = lambda nat , var : 2 - int( [i for i in AMINOCHANGE_GROUPS if nat in i][0] == [i for i in AMINOCHANGE_GROUPS if var in i][0] ) - int( nat == var )
+
+    # do this mapping once, rather than locate each task when needed
+    important_tasks = {}
+    for i in task_summary['commands']:
+        if i['feature'] == 'psiblast':
+            if 'psiblast' in important_tasks.keys():
+                raise Exception( '??? duplicate psiblast task ???' )
+            important_tasks['psiblast'] = i
+        elif i['feature'] == 'probe':
+            if 'probe' in important_tasks.keys():
+                raise Exception( '??? duplicate probe task ???' )
+            important_tasks['probe'] = i
+        elif i['feature'] == 'ddg_monomer':
+            if 'ddg_monomer' in important_tasks.keys():
+                raise Exception( '??? duplicate ddg_monomer task ???' )
+            important_tasks['ddg_monomer'] = i
+        elif i['feature'] == 'relax_native_rescore':
+            if 'relax_rescore_task' in important_tasks.keys():
+                raise Exception( '??? duplicate relax_native_rescore task ???' )
+            important_tasks['relax_native_rescore'] = i
+        elif i['feature'] == 'relax_rescore':
+            if 'relax_rescore_' + i['variant'] in important_tasks.keys():
+                raise Exception( '??? duplicate relax_rescore_' + i['variant'] +' task ???' )
+            important_tasks['relax_rescore_' + i['variant']] = i
+        #else:
+            # misc/relax runs...
     
     # psiblast
-    psiblast_task = [i for i in task_summary['commands'] if i['feature'] == 'psiblast']
-    if not psiblast_task or not 'run' in psiblast_task[0].keys() or not 'success' in psiblast_task[0]['run']:
+#    psiblast_task = [i for i in task_summary['commands'] if i['feature'] == 'psiblast']
+#    if not psiblast_task or not 'run' in psiblast_task[0].keys() or not 'success' in psiblast_task[0]['run']:
+    if not 'psiblast' in important_tasks.keys() or not 'run' in important_tasks['psiblast'].keys() or not 'success' in important_tasks['psiblast']['run']:
         raise Exception( 'psiblast did not complete successfully!!!' )
 
-    pssm = extract_pssm_from_psiblast_pssm( psiblast_task[0]['output_filename'] )
+    pssm = extract_pssm_from_psiblast_pssm( important_tasks['psiblast']['output_filename'] )
     if not residue_map:
         residue_map = dict( [(str( i ) , str( i )) for i in pssm.keys()] )
 
@@ -79,15 +106,17 @@ def run_postprocessing( task_summary_filename , sequence_only = False ):
 
     if not sequence_only:
         # probe
-        probe_task = [i for i in task_summary['commands'] if i['feature'] == 'probe']
-        if not probe_task or not 'run' in probe_task[0].keys() or not 'success' in probe_task[0]['run']:
+#        probe_task = [i for i in task_summary['commands'] if i['feature'] == 'probe']
+#        if not probe_task or not 'run' in probe_task[0].keys() or not 'success' in probe_task[0]['run']:
+        if not 'probe' in important_tasks.keys() or not 'run' in important_tasks['probe'].keys() or not 'success' in important_tasks['probe']['run']:
             raise Exception( 'probe did not complete successfully!!!' )
+
         if not 'probe_positions' in task_summary['other']:
             raise Exception( 'task summary was not written properly' )
         positions = task_summary['other']['probe_positions']
         
         # extract the PROBE feature
-        accp = extract_accp_from_probe( probe_task[0]['output_filename'] )
+        accp = extract_accp_from_probe( important_tasks['probe']['output_filename'] )
         # positions is a parallel list of positions
         accp_dict = dict( [(positions[i] , accp[i]) for i in xrange( len( accp ) )] )
         for i in task_summary['variants'].keys():
@@ -101,10 +130,11 @@ def run_postprocessing( task_summary_filename , sequence_only = False ):
                 continue
 
         # ddg monomer
-        ddg_monomer_task = [i for i in task_summary['commands'] if i['feature'] == 'ddg_monomer']
-        if not ddg_monomer_task or not 'run' in ddg_monomer_task[0].keys() or not 'success' in ddg_monomer_task[0]['run']:
+#        ddg_monomer_task = [i for i in task_summary['commands'] if i['feature'] == 'ddg_monomer']
+#        if not ddg_monomer_task or not 'run' in ddg_monomer_task[0].keys() or not 'success' in ddg_monomer_task[0]['run']:
+        if not 'ddg_monomer' in important_tasks.keys() or not 'run' in important_tasks['ddg_monomer'].keys() or not 'success' in important_tasks['ddg_monomer']['run']:
             raise Exception( 'ddg_monomer did not complete successfully!!!' )
-        ddg_monomer_dict = extract_score_terms_from_ddg_monomer( out_filename = ddg_monomer_task[0]['output_filename'] )
+        ddg_monomer_dict = extract_score_terms_from_ddg_monomer( out_filename = important_tasks['ddg_monomer']['output_filename'] )
         # the residues from this will be "pose numbered", need to map back to the PDB numbering
         header = ddg_monomer_dict['description']
         for i in task_summary['variants'].keys():
@@ -119,10 +149,11 @@ def run_postprocessing( task_summary_filename , sequence_only = False ):
         
         # relax
         # get native relax reference scores
-        native_task = [i for i in task_summary['commands'] if i['feature'] == 'relax_native_rescore']# and i['variant'] == 'native']
-        if not native_task or not 'run' in native_task[0].keys() or not 'success' in native_task[0]['run']:
+#        native_task = [i for i in task_summary['commands'] if i['feature'] == 'relax_native_rescore']# and i['variant'] == 'native']
+#        if not native_task or not 'run' in native_task[0].keys() or not 'success' in native_task[0]['run']:
+        if not 'relax_native_rescore' in important_tasks.keys() or not 'run' in important_tasks['relax_native_rescore'].keys() or not 'success' in important_tasks['relax_native_rescore']['run']:
             raise Exception( 'relax for the native structure reference did not complete successfully!!!' )
-        native_scorefile_dict = extract_scores_from_scorefile( native_task[0]['output_filename'] )    # save time, only parse this once
+        native_scorefile_dict = extract_scores_from_scorefile( important_tasks['relax_native_rescore']['output_filename'] )    # save time, only parse this once
         
         for i in task_summary['variants'].keys():
             if 'failed' in task_summary['variants'][i].keys():
@@ -135,13 +166,14 @@ def run_postprocessing( task_summary_filename , sequence_only = False ):
             #    variants...could change in the future...
 
             mutation = i.split( '_' )[-1]
-            rescore_task = [j for j in task_summary['commands'] if j['feature'] == 'relax_rescore' and j['variant'] == mutation]
-            if not rescore_task or not 'run' in rescore_task[0].keys() or not 'success' in rescore_task[0]['run']:
+#            rescore_task = [j for j in task_summary['commands'] if j['feature'] == 'relax_rescore' and j['variant'] == mutation]
+#            if not rescore_task or not 'run' in rescore_task[0].keys() or not 'success' in rescore_task[0]['run']
+            if not 'relax_rescore_' + mutation in important_tasks.keys() or not 'run' in important_tasks['relax_rescore_' + mutation].keys() or not 'success' in important_tasks['relax_rescore_' + mutation]['run']:
                 raise Exception( 'rescore (or relax?) did not complete successfully!!!' )
     
             # extract features, use the quartile method to extract comparisons
             # between the native and variant score distributions
-            quartile_scores = extract_quartile_score_terms_from_scorefiles( rescore_task[0]['output_filename'] , native_scorefile_dict )
+            quartile_scores = extract_quartile_score_terms_from_scorefiles( important_tasks['relax_rescore_' + mutation]['output_filename'] , native_scorefile_dict )
             # make sure there is not overlap
             overlaps = [j for j in quartile_scores.keys() if j in task_summary['variants'][i]['features'].keys()]
             if overlaps:
