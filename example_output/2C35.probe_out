@@ -1,5 +1,5 @@
-program: probe.2.12.071128, run Mon Feb 23 14:49:37 2015
-command: /home/evan/Archive/Current/NYU_Fall4_2014/refactor_planning/simple_script/VIPUR_feature_executables/probe -Q 101 -rad1.4 -C -out 2C35.pdb
+program: probe.2.12.071128, run Thu Jun 11 12:42:26 2015
+command: /home/evan/VIPUR_pipeline/VIPUR_feature_executables/probe -Q 101 -rad1.4 -C -out 2C35.pdb
 selection: external
 name: dots
 density: 16.0 dots per A^2
@@ -17,8 +17,8 @@ potential area: 61.6 A^2
    contact surface area: 0.2 A^2
 accessible surface area: 1.0 A^2
 
-program: probe.2.12.071128, run Mon Feb 23 14:49:37 2015
-command: /home/evan/Archive/Current/NYU_Fall4_2014/refactor_planning/simple_script/VIPUR_feature_executables/probe -Q 14 -rad1.4 -C -out 2C35.pdb
+program: probe.2.12.071128, run Thu Jun 11 12:42:26 2015
+command: /home/evan/VIPUR_pipeline/VIPUR_feature_executables/probe -Q 14 -rad1.4 -C -out 2C35.pdb
 selection: external
 name: dots
 density: 16.0 dots per A^2
@@ -38,8 +38,8 @@ potential area: 113.3 A^2
    contact surface area: 53.9 A^2
 accessible surface area: 197.1 A^2
 
-program: probe.2.12.071128, run Mon Feb 23 14:49:37 2015
-command: /home/evan/Archive/Current/NYU_Fall4_2014/refactor_planning/simple_script/VIPUR_feature_executables/probe -Q 84 -rad1.4 -C -out 2C35.pdb
+program: probe.2.12.071128, run Thu Jun 11 12:42:26 2015
+command: /home/evan/VIPUR_pipeline/VIPUR_feature_executables/probe -Q 84 -rad1.4 -C -out 2C35.pdb
 selection: external
 name: dots
 density: 16.0 dots per A^2
