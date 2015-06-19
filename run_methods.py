@@ -32,15 +32,20 @@ from rosetta_feature_generation import *
 from classification import *
 
 ################################################################################
-# RUN METHODS
+# SERIAL RUN METHODS
 
 # different options/approaches for setting up job processing
 
-def run_until_complete( command_dict , run_command , check_successful , max_tries ):
+def run_serially_until_complete( command_dict , run_command , check_successful , max_tries ):
     tries = 0
     complete = False
     failure_summary = ''
     while tries < max_tries and not complete:
+        # already done?
+        if 'run' in command_dict.keys() and command_dict['run'] == 'success':
+            complete = True
+            break
+    
         # run it
         run_command( command_dict['command'] )
         
@@ -57,7 +62,7 @@ def run_until_complete( command_dict , run_command , check_successful , max_trie
 
 
 # simples task manager, just fire off sequentially + locally
-def run_tasks_locally( task_summary_filename ,
+def run_task_commands_serially( task_summary_filename ,
         ddg_monomer_cleanup = True , max_tries = 2 ,
         single_relax = False , delete_intermediate_relax_files = False ):
     # alternate input type
@@ -74,9 +79,15 @@ def run_tasks_locally( task_summary_filename ,
     # skip rescore, must wait until corresponding relax job is finished
     print 'launching jobs locally...\n'
     for i in task_summary['commands']:
+        # these MUST occur AFTER the relax jobs have been run and combined
         if 'rescore' in i['feature']:    # check for now...
             continue
-    
+        
+        # skip those that have alreay run
+        if 'run' in i.keys() and i['run'] == 'success' and os.path.isfile( i['output_filename'] ):
+            print i['output_filename'] + ' appears to have been successfully generated, do not run it again'
+            continue
+
         # run the command
         # replace with a while loop checking success...
         check_successful = lambda x : True    # assume successful
@@ -94,8 +105,8 @@ def run_tasks_locally( task_summary_filename ,
         elif i['feature'].replace( '_native' , '' ) == 'relax' and not 'rescore' in i['feature']:
             check_successful = lambda x : check_relax_output( ROSETTA_RELAX_OPTIONS['out:file:scorefile']( x['output_filename'].replace( '.silent' , '' ) ) , single_relax = single_relax )
 
-        # alternate method, run until complete        
-        completed , tries , failure_summary = run_until_complete( i , run_command = run_local_commandline , check_successful = check_successful , max_tries = max_tries )
+        # alternate method, run until complete
+        completed , tries , failure_summary = run_serially_until_complete( i , run_command = run_local_commandline , check_successful = check_successful , max_tries = max_tries )
     
         # optionally cleanup
         if ddg_monomer_cleanup and i['feature'] == 'ddg_monomer':#'ddg' in i['output_filename']:
@@ -108,28 +119,33 @@ def run_tasks_locally( task_summary_filename ,
     # not do rescore, "but only if complete" (not currently checking)
     relax_commands = [i for i in task_summary['commands'] if i['feature'].replace( '_native' , '' ) == 'relax']
     for i in task_summary['commands']:
-        if not 'rescore' in i['feature'] and 'run' in i.keys() and i['run'] == 'success':
+        if 'run' in i.keys() and i['run'] == 'success':
+            if 'rescore' in i['feature'] and os.path.isfile( i['output_filename'] ):
+                print i['output_filename'] + ' appears to have been successfully generated, do not run it again'
+            # skip, either its not a rescore, or its a rescore that ran successfully
             continue
         
         # combine the individual relax runs
         silent_filenames = [j['output_filename'] for j in relax_commands if j['variant'] == i['variant'] and 'run' in j.keys() and j['run'] == 'success']
-        if not single_relax:
+        # actually need to identify the combined_silent_filename, be sure the relax files have not already been merged
+        # which variant
+        target_variant = [j for j in task_summary['variants'].keys() if j.split( '_' )[-1] == i['variant'] and j.split( '_' )[0] in i['command']]
+        if not target_variant:
+            # its native
+            combined_silent_filename = task_summary['other']['combined_native_silent_filename']
+            combined_score_filename = task_summary['other']['combined_native_score_filename']
+        elif len( target_variant ) > 1:
+            raise Exception( '??? found more than on matching variant ???\n' + ', '.join( target_variant ) )
+        else:
+            # found it
+            combined_silent_filename = task_summary['variants'][target_variant[0]]['combined_silent_filename']
+            combined_score_filename = task_summary['variants'][target_variant[0]]['combined_score_filename']
+
+        #if not single_relax:    # AND post processing has not already be run...scan for the combined silent file
+        if not single_relax and not os.path.isfile( combined_silent_filename ):
             if not len( silent_filenames ) == ROSETTA_RELAX_OPTIONS['nstruct']:
                 raise Exception( '??? somehow the matching relax run(s) has failed ???\n' + str( i ) )
             score_filenames = [j.replace( '.silent' , '.sc' ) for j in silent_filenames]
-
-            # which variant
-            target_variant = [j for j in task_summary['variants'].keys() if j.split( '_' )[-1] == i['variant'] and j.split( '_' )[0] in i['command']]
-            if not target_variant:
-                # its native
-                combined_silent_filename = task_summary['other']['combined_native_silent_filename']
-                combined_score_filename = task_summary['other']['combined_native_score_filename']
-            elif len( target_variant ) > 1:
-                raise Exception( '??? found more than on matching variant ???\n' + ', '.join( target_variant ) )
-            else:
-                # found it
-                combined_silent_filename = task_summary['variants'][target_variant[0]]['combined_silent_filename']
-                combined_score_filename = task_summary['variants'][target_variant[0]]['combined_score_filename']
 
             merge_rosetta_relax_output( silent_filenames , combined_silent_filename , score_filenames , combined_score_filename , delete_old_files = delete_intermediate_relax_files )
             # rescore already knows the proper filename
@@ -139,11 +155,12 @@ def run_tasks_locally( task_summary_filename ,
             None
         
         # else, its a rescore, check the corresponding relax
+        # should already point to the proper combined_silent_filename
         if not 'rescore' in i['feature'] or not 'variant' in i.keys():
             raise Exception( '??? incomplete or erroneous command that is not a rescore ???\n' + str( i ) )
         else:
             # is a rescore AND its relax job it complete, run it
-            run_local_commandline( i['command'] )
+            run_local_commandline( i['command'] )    # not 'run_until_complete'?
             i['run'] = 'success'
 
     # return anything?
@@ -159,26 +176,13 @@ def run_tasks_locally( task_summary_filename ,
     return task_summary
 
 
-# overall method, for now, only supports local
-def run_VIPUR_in_stages( pdb_filename , variants_filename , prediction_filename = '' , out_path = '' ,
-        target_chain = '' , sequence_filename = '' , write_numbering_map = True ,
-        sequence_only = False , task_summary_filename = '' , single_relax = False , delete_intermediate_relax_files = True ):
-    # preprocessing
-    task_summary_filename = run_preprocessing( pdb_filename , variants_filename , prediction_filename , out_path = out_path ,
-        target_chain = target_chain , sequence_filename = sequence_filename , write_numbering_map = write_numbering_map ,
-        sequence_only = sequence_only , task_summary_filename = task_summary_filename , single_relax = single_relax )
-    
-    # run locally
-    task_summary = run_tasks_locally( task_summary_filename ,
-        single_relax = single_relax , delete_intermediate_relax_files = delete_intermediate_relax_files )
-    # "sequence_only" details are covered in the "task_summary_filename"
-    
-    # post processing
-    run_postprocessing( task_summary , sequence_only = sequence_only )
+def run_VIPUR_task_summaries_serially( task_summaries , single_relax = False , delete_intermediate_relax_files = True ):
+    for i in xrange( len( task_summaries ) ):
+        # tasks will check if the task summaries indicates they have already be run
+        task_summaries[i] = run_task_commands_serially( task_summaries[i] , single_relax = single_relax , delete_intermediate_relax_files = delete_intermediate_relax_files )
 
-    return task_summary
 
-################################################################################
+#####################
 # MULTI-INPUT METHODS
 
 # identify the targets and do pre-processing and post-processing together
@@ -186,7 +190,7 @@ def run_VIPUR_in_stages( pdb_filename , variants_filename , prediction_filename 
 def run_VIPUR_serially( pdb_filename = '' , variants_filename = '' ,
         out_path = '' , write_numbering_map = True ,
         single_relax = False , delete_intermediate_relax_files = True ,
-        demo = False ):
+        demo = False , rerun_preprocessing = False ):
     # for the example input
     if demo:
         pdb_filename = PATH_TO_VIPUR + '/example_input/2C35.pdb'
@@ -207,22 +211,26 @@ def run_VIPUR_serially( pdb_filename = '' , variants_filename = '' ,
     if os.path.isdir( pdb_filename ) and variants_filename[0] == '.':
         # look for file extension
         # instead, run on the directory
-        fa_filenames = [i for i in os.listdir( pdb_filename ) if get_file_extension( i ) == 'fa']
-        fa_filenames = [(i , get_root_filename( i ) + variants_filename) for i in fa_filenames if os.path.isfile( pdb_filename +'/'+ get_root_filename( i ) + variants_filename )]
+        if not out_path:
+            out_path = os.path.abspath( pdb_filename )
+#            print out_path
+        
+        fa_filenames = [(out_path +'/')*bool( out_path ) + i for i in os.listdir( pdb_filename ) if get_file_extension( i ) == 'fa']
+        fa_filenames = [[i , get_root_filename( i ) + variants_filename] for i in fa_filenames if os.path.isfile( get_root_filename( i ) + variants_filename ) and not os.path.isfile( get_root_filename( i ) + '.pdb' )]
 
         print 'running VIPUR on all (.pdb,' + variants_filename + ') file pairs found in ' + pdb_filename
         # find .pdb files
-        pdb_filenames = [i for i in os.listdir( pdb_filename ) if get_file_extension( i ) == 'pdb']
+        pdb_filenames = [(out_path +'/')*bool( out_path ) + i for i in os.listdir( pdb_filename ) if get_file_extension( i ) == 'pdb']
 
         # look for pairs
-        pdb_filenames = [(i , get_root_filename( i ) + variants_filename) for i in pdb_filenames if os.path.isfile( pdb_filename +'/'+ get_root_filename( i ) + variants_filename )]
-#        print [i for i in pdb_filenames if os.path.isfile( pdb_filename +'/'+ get_root_filename( i ) + variants_filename )]        
-        print str( len( pdb_filenames ) ) + ' pairs found'
+        pdb_filenames = [[i , get_root_filename( i ) + variants_filename] for i in pdb_filenames if os.path.isfile( get_root_filename( i ) + variants_filename )]
+#        print [i for i in pdb_filenames if os.path.isfile( pdb_filename +'/'+ get_root_filename( i ) + variants_filename )]
 
-        print str( len( fa_filenames ) ) + ' pairs found'
+        print str( len( pdb_filenames ) ) + ' pairs found'
+        print str( len( fa_filenames ) ) + ' pairs found (for sequence only)'
 
         # go there...
-        os.chdir( pdb_filename )
+#        os.chdir( pdb_filename )
 
         if not pdb_filenames:
             if not fa_filenames:
@@ -239,23 +247,49 @@ def run_VIPUR_serially( pdb_filename = '' , variants_filename = '' ,
         pdb_filenames = []
         fa_filenames = []
         if file_extension == 'pdb':
-            pdb_filenames = [[pdb_filename , variants_filename]]
+            pdb_filenames = [[(out_path +'/')*bool( out_path ) + pdb_filename , (out_path +'/')*bool( out_path ) + variants_filename]]
         else:
             fa_filenames = [[]]
+
 
     # combine all "filenames" to run into unified framework
     target_proteins = []#None]*(len( pdb_filenames ) + len( fa_filenames ))
     for i in pdb_filenames:
-        target_proteins.append( i + [False , out_path] )
+#        print out_path
+#        print get_root_filename( i[0] )
+#        print out_path +'/'+ get_root_filename( i[0] )
+#        raw_input( 'next' )
+        this_out_path = get_root_filename( i[0] ) +'_VIPUR'    # directory to create
+        target_proteins.append( i + [False , this_out_path] )
     for i in fa_filenames:
-        target_proteins.append( i + [True , out_path] )
+        this_out_path = get_root_filename( i[0] ) +'_VIPUR'    # directory to create
+        target_proteins.append( i + [True , this_out_path] )
+
 
     # pre processing
     task_summaries = []
     for i in target_proteins:
-        task_summary_filename = run_preprocessing( i[0] , i[1] ,
-            sequence_only = i[2] , out_path = i[3] ,
-            write_numbering_map = write_numbering_map , single_relax = single_relax )
+        # check paths...er, done properly in preprocessing...
+#        if not os.path.isfile( i[0] ):
+#            raise IOError( 'cannot find ' + i[0] + '!!!' )
+#        if not os.path.isfile( i[1] ):
+#            raise IOError( 'cannot find ' + i[1] + '!!!' )
+
+        # guess what the task summary filename 'would' be, if it exists, keep going...
+        task_summary_filename = i[3]*bool( i[3] ) +'/'+ get_root_filename( i[0] ).split( '/' )[-1] + '.task_summary'
+#        print task_summary_filename
+#        raw_input( 'poo' )
+        if os.path.isfile( task_summary_filename ) and not rerun_preprocessing:
+            print 'hmmm, ' + i[0] + ' seems to have run preprocessing already, skipping now'
+            #continue    # skip this one, do not add to list of tasks...?
+            # actually, skip running pre-processing BUT DO add it to the list of tasks
+        else:
+#            print i
+        
+            task_summary_filename = run_preprocessing( i[0] , i[1] ,
+                sequence_only = i[2] , out_path = i[3] ,
+                task_summary_filename = task_summary_filename ,
+                write_numbering_map = write_numbering_map , single_relax = single_relax )
 
         task_summaries.append( task_summary_filename )
 
@@ -267,13 +301,16 @@ def run_VIPUR_serially( pdb_filename = '' , variants_filename = '' ,
 #            single_relax = single_relax , sequence_only = True )
 
 #        sequence_task_summaries.append( task_summary_filename )
+#    raw_input( 'preprocessing' )
 
     # run them all
-    for i in xrange( len( task_summaries ) ):
-        task_summaries[i] = run_tasks_locally( task_summaries[i] , single_relax = single_relax , delete_intermediate_relax_files = delete_intermediate_relax_files )
+    run_VIPUR_task_summaries_serially( task_summaries , single_relax = single_relax , delete_intermediate_relax_files = delete_intermediate_relax_files )
+#    for i in xrange( len( task_summaries ) ):
+        # tasks will check if the task summaries indicates they have already be run
+#        task_summaries[i] = run_task_commands_serially( task_summaries[i] , single_relax = single_relax , delete_intermediate_relax_files = delete_intermediate_relax_files )
         # works for both full and sequence only
 #    for i in xrange( len( sequence_task_summaries ) ):
-#        sequence_task_summaries[i] = run_tasks_locally( sequence_task_summaries[i] )    # those extra options are irrelevant
+#        sequence_task_summaries[i] = run_task_commands_serially( sequence_task_summaries[i] )    # those extra options are irrelevant
         
 #    run_VIPUR_parallel( pdb_filename , variants_filename ,
 #        prediction_filename = prediction_filename , out_path = out_path ,
@@ -291,15 +328,18 @@ def run_VIPUR_serially( pdb_filename = '' , variants_filename = '' ,
 #        prediction_filename = prediction_filename , out_path = out_path ,
 #        target_chain = target_chain , write_numbering_map = write_numbering_map ,
 #        sequence_only = sequence_only )
+#    raw_input( 'run etc.' )
+
 
     # post processing
     for i in xrange( len( task_summaries ) ):
+        # always okay to rerun post processing...should not make any difference
         sequence_only = target_proteins[i][2]
         task_summaries[i] = run_postprocessing( task_summaries[i] , sequence_only = sequence_only )
 #    for i in xrange( len( sequence_task_summaries ) ):
 #        sequence_task_summaries[i] = run_postprocessing( sequence_task_summaries[i] , sequence_only = True )
 
-    task_summaries = task_summaries + sequence_task_summaries
+#    task_summaries = task_summaries + sequence_task_summaries
 
     return task_summaries
 
@@ -314,6 +354,29 @@ def run_VIPUR_serially( pdb_filename = '' , variants_filename = '' ,
     
     # post process all the things
 
+################################################################################
+# SINGLE INPUT METHODS
+
+# below here, methods are for a single input
+
+# overall method, for now, only supports local
+def run_VIPUR_in_stages( pdb_filename , variants_filename , prediction_filename = '' , out_path = '' ,
+        target_chain = '' , sequence_filename = '' , write_numbering_map = True ,
+        sequence_only = False , task_summary_filename = '' , single_relax = False , delete_intermediate_relax_files = True ):
+    # preprocessing
+    task_summary_filename = run_preprocessing( pdb_filename , variants_filename , prediction_filename , out_path = out_path ,
+        target_chain = target_chain , sequence_filename = sequence_filename , write_numbering_map = write_numbering_map ,
+        sequence_only = sequence_only , task_summary_filename = task_summary_filename , single_relax = single_relax )
+    
+    # run locally
+    task_summary = run_task_commands_serially( task_summary_filename ,
+        single_relax = single_relax , delete_intermediate_relax_files = delete_intermediate_relax_files )
+    # "sequence_only" details are covered in the "task_summary_filename"
+    
+    # post processing
+    run_postprocessing( task_summary , sequence_only = sequence_only )
+
+    return task_summary
 
 ################################################################################
 # COMPLETE METHODS
@@ -396,7 +459,7 @@ def run_VIPUR_deprecated( pdb_filename , variants_filename , prediction_filename
         variants_filename = variants_filename.split( '/' )[-1]
 
         # since ddg_monomer just writes into the directory its run in (facepalms)
-        os.chdir( out_path )
+#        os.chdir( out_path )
     else:
         # more bad solutions...but this is just a temporary solution
         if '/' in pdb_filename:

@@ -15,7 +15,7 @@ import sys
 # bigger modules
 
 # custom modules
-from helper_methods import load_variants_file , check_variants , extract_chains_from_pdb , get_file_extension , get_root_filename
+from helper_methods import load_variants_file , check_variants , extract_chains_from_pdb , get_file_extension , get_root_filename , create_directory , copy_file
 
 from psiblast_feature_generation import load_fasta , extract_protein_sequence_from_pdb , run_psiblast
 from probe_feature_generation import run_probe
@@ -42,6 +42,10 @@ def run_preprocessing( pdb_filename , variants_filename , prediction_filename = 
 
     file_extension = get_file_extension( pdb_filename )
     root_filename = get_root_filename( pdb_filename )
+    base_root_filename = root_filename.split( '/' )[-1]
+    
+#    print root_filename
+#    raw_input( 'pause' )
 
     if not task_summary_filename:
         task_summary_filename = root_filename + '.task_summary'
@@ -49,17 +53,24 @@ def run_preprocessing( pdb_filename , variants_filename , prediction_filename = 
     # where to store output?
     if out_path:
         if not os.path.isdir( out_path ):
+#            print out_path
+#            print os.getcwd()
             create_directory( out_path )
 
         # make copies of the input files
         # bad solution for now, will copy the input into output directory
-        if not os.path.isfile( out_path +'/'+ pdb_filename ):
+        if not os.path.isfile( out_path +'/'+ base_root_filename +'.pdb' ):
             copy_file( os.path.abspath( pdb_filename ) , out_path )
-        if not os.path.isfile( out_path +'/'+ variants_filename ):
+        if not os.path.isfile( out_path +'/'+ base_root_filename + '.txt' ):
             copy_file( os.path.abspath( variants_filename ) , out_path )
         
+        root_filename = out_path +'/'+ base_root_filename
+        pdb_filename = root_filename +'.'+ file_extension
+        variants_filename = root_filename +'.txt'
+        
         # since ddg_monomer just writes into the directory its run in (facepalms)
-        os.chdir( out_path )    # not happening here now err, for variant structures
+#        current_dir = os.getcwd()
+#        os.chdir( out_path )    # not happening here now err, for variant structures
     else:
         # otherwise, operate in the current directory
         if not os.path.isfile( pdb_filename ):
@@ -68,10 +79,10 @@ def run_preprocessing( pdb_filename , variants_filename , prediction_filename = 
             copy_file( os.path.abspath( variants_filename ) , '.' )
 
     # just the base filename
-    if '/' in pdb_filename:
-        pdb_filename = pdb_filename.split( '/' )[-1]
-    if '/' in variants_filename:
-        variants_filename = variants_filename.split( '/' )[-1]
+#    if '/' in pdb_filename:
+#        pdb_filename = pdb_filename.split( '/' )[-1]
+#    if '/' in variants_filename:
+#        variants_filename = variants_filename.split( '/' )[-1]
 
 
     # extract the structure's sequence
@@ -94,6 +105,8 @@ def run_preprocessing( pdb_filename , variants_filename , prediction_filename = 
         else:
             numbering_map_filename = root_filename + '.numbering_map'
 
+#        print numbering_map_filename
+#        raw_input( 'moo' )
         f = open( numbering_map_filename , 'w' )
         keys = sorted( residue_map.keys() , key = lambda x : int( x ) )
         f.write( '\n'.join( ['\t'.join( [i , str( residue_map[i] + 1 ) , sequence[residue_map[i]]] ) for i in keys] ) )
@@ -103,6 +116,7 @@ def run_preprocessing( pdb_filename , variants_filename , prediction_filename = 
         sys.stdout.flush()
     else:    # the normal protocol
         if not target_chain:    # also support int for index?
+#            print pdb_filename
             target_chain = extract_chains_from_pdb( pdb_filename )
             target_chain = target_chain[0]    # always a list
 
@@ -177,7 +191,7 @@ def run_preprocessing( pdb_filename , variants_filename , prediction_filename = 
 
         print '[[VIPURLOG]]generating Rosetta ddg_monomer run command'
         sys.stdout.flush()
-        ddg_monomer_command , ddg_monomer_out_filename = run_rosetta_ddg_monomer( pdb_filename , mut_filename , run = False )
+        ddg_monomer_command , ddg_monomer_out_filename = run_rosetta_ddg_monomer( pdb_filename , mut_filename , out_path = out_path , run = False )
             # extract the ddg_monomer score results
         # (remember the residue mapping)
 
@@ -350,6 +364,8 @@ def run_preprocessing( pdb_filename , variants_filename , prediction_filename = 
     
     # testing   
 #    load_task_summary( task_summary_filename )
+    
+#    os.chdir( current_dir )    # go back...
     
     return task_summary_filename
 

@@ -135,7 +135,7 @@ def write_mut_file( variants , residue_map , mut_filename ):
     f.close()
 
 # local
-def run_rosetta_ddg_monomer( pdb_filename , mut_filename , out_filename = '' , cleanup = True , run = True ):
+def run_rosetta_ddg_monomer( pdb_filename , mut_filename , out_filename = '' , out_path = '' , cleanup = True , run = True ):
     root_filename = os.path.abspath( pdb_filename ).rstrip( '.pdb' )
     # hardcoded...ddg_monomer is such a painful protocol...
     out_filename = ''
@@ -159,7 +159,12 @@ def run_rosetta_ddg_monomer( pdb_filename , mut_filename , out_filename = '' , c
         if isinstance( ddg_monomer_options[i] , str ) and os.path.isfile( ddg_monomer_options[i] ):
             ddg_monomer_options[i] = os.path.abspath( ddg_monomer_options[i] )
     
-    command = create_executable_str( PATH_TO_ROSETTA_DDG_MONOMER , args = [] , options = ddg_monomer_options )
+    command = ''
+    # optionally move into the specific directory...
+    if out_path:
+        command += 'cd '+ out_path +'; '
+    
+    command += create_executable_str( PATH_TO_ROSETTA_DDG_MONOMER , args = [] , options = ddg_monomer_options )
 
     if run:
         run_local_commandline( command )
