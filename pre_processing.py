@@ -304,6 +304,8 @@ def run_preprocessing( pdb_filename , variants_filename , prediction_filename = 
     summary_text += 'other| ' + 'target_chain:' + target_chain +','+ 'sequence_only:' + str( sequence_only ) +'\n'    # only these 2 for now...
 
     summary_text += 'files| ' + 'pdb_filename:' + pdb_filename +','+ 'variants_filename:' + variants_filename +','+ 'prediction_filename:' + prediction_filename +','+ 'sequence_filename:' + sequence_filename
+    # lol...wtf
+    summary_text += ',task_summary_filename:' + task_summary_filename
     if write_numbering_map:
         summary_text += ',numbering_map:' + root_filename +'.numbering_map'
     summary_text += '\n'
@@ -441,7 +443,10 @@ def write_task_summary( task_summary , task_summary_filename ):
         else:
             raise Exception( 'not currently supported...' + i +' '+ str( task_summary['other'][i] ) )
     summary_text = summary_text.rstrip( ' ,' ) +'\n'
-    
+
+    # add "task_summary_filename" if it is absent?
+    if not 'task_summary_filename' in task_summary['filenames'].keys():
+        task_summary['filenames']['task_summary_filename'] = task_summary_filename    
     summary_text += 'files| ' + ','.join( [i +':'+ task_summary['filenames'][i] for i in task_summary['filenames'].keys()] ) +'\n'
     for i in task_summary['variants'].keys():
         # only add bridging "," if >1 keys

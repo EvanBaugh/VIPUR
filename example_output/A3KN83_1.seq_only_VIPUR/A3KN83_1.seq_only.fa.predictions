@@ -1,0 +1,2 @@
+variant	label prediction	confidence score	structure-only label prediction	structure-only confidence score	sequence-only label prediction	sequence-only confidence score	exposure	essential score	ddG prediction ~kcal/mol	interpretation	top 3 ranked features
+/home/evan/VIPUR_pipeline/VIPUR/example_input/A3KN83_1.seq_only_VIPUR/A3KN83_1.seq_only_E788K	neutral	0.107830172781	NA	NA	neutral	0.107830172781	NA	NA	NA	NA	NA

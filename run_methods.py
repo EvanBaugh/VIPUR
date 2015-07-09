@@ -71,10 +71,15 @@ def run_task_commands_serially( task_summary_filename ,
     else:
         # shrug? assume its okay
         task_summary = task_summary_filename
+        # modified: task summary SHOULD have this field
+        if 'task_summary_filename' in task_summary['filenames'].keys():
+            task_summary_filename = task_summary['filenames']['task_summary_filename']
+        else:
+            raise NotImplementedError( 'should input the task summary filename (not the summary itself)...' )
     
     # move into the target directory before continuing, for ddg_monomer local
     current_dir = os.getcwd()
-    os.chdir( task_summary['out_path'] )
+    os.chdir( task_summary['out_path'] )    # for PBS etc. instead add "cd " to run script
         
     # skip rescore, must wait until corresponding relax job is finished
     print 'launching jobs locally...\n'
@@ -90,20 +95,22 @@ def run_task_commands_serially( task_summary_filename ,
 
         # run the command
         # replace with a while loop checking success...
-        check_successful = lambda x : True    # assume successful
-        if i['feature'] == 'psiblast':
+#        check_successful = lambda x : True    # assume successful
+#        if i['feature'] == 'psiblast':
             # just the pssm
             # assumes blast output structure...
-            check_successful = lambda x : check_psiblast_output( x['output_filename'] , PSIBLAST_OPTIONS['out']( x['output_filename'].replace( '.pssm' , '' ) ) )
+#            check_successful = lambda x : check_psiblast_output( x['output_filename'] , PSIBLAST_OPTIONS['out']( x['output_filename'].replace( '.pssm' , '' ) ) )
 
-        elif i['feature'] == 'probe':
-            check_successful = lambda x : check_probe_output( x['output_filename'] )
+#        elif i['feature'] == 'probe':
+#            check_successful = lambda x : check_probe_output( x['output_filename'] )
 
-        elif i['feature'] == 'ddg_monomer':
-            check_successful = lambda x : check_ddg_monomer_output( x['output_filename'] )
+#        elif i['feature'] == 'ddg_monomer':
+#            check_successful = lambda x : check_ddg_monomer_output( x['output_filename'] )
 
-        elif i['feature'].replace( '_native' , '' ) == 'relax' and not 'rescore' in i['feature']:
-            check_successful = lambda x : check_relax_output( ROSETTA_RELAX_OPTIONS['out:file:scorefile']( x['output_filename'].replace( '.silent' , '' ) ) , single_relax = single_relax )
+#        elif i['feature'].replace( '_native' , '' ) == 'relax' and not 'rescore' in i['feature']:
+#            check_successful = lambda x : check_relax_output( ROSETTA_RELAX_OPTIONS['out:file:scorefile']( x['output_filename'].replace( '.silent' , '' ) ) , single_relax = single_relax )
+
+        check_successful = determine_check_successful_function( i , single_relax = single_relax )
 
         # alternate method, run until complete
         completed , tries , failure_summary = run_serially_until_complete( i , run_command = run_local_commandline , check_successful = check_successful , max_tries = max_tries )
@@ -168,6 +175,9 @@ def run_task_commands_serially( task_summary_filename ,
     # should communicate by writing file
 
     # rewrite task summary...
+    #if not isinstance( task_summary_filename , str ):
+        #raise NotImplementedError( 'should input the task summary filename (not the summary itself)...' )
+        # actually, is currently implemented...see above
     write_task_summary( task_summary , task_summary_filename )
     task_summary = load_task_summary( task_summary_filename )
 
@@ -353,6 +363,27 @@ def run_VIPUR_serially( pdb_filename = '' , variants_filename = '' ,
     # run locally in serial
     
     # post process all the things
+
+
+# sort the check_successful function
+def determine_check_successful_function( command_dict , single_relax = False ):
+    check_successful = lambda x : True    # assume successful
+    if command_dict['feature'] == 'psiblast':
+        # just the pssm
+        # assumes blast output structure...
+        check_successful = lambda x : check_psiblast_output( x['output_filename'] , PSIBLAST_OPTIONS['out']( x['output_filename'].replace( '.pssm' , '' ) ) )
+
+    elif command_dict['feature'] == 'probe':
+        check_successful = lambda x : check_probe_output( x['output_filename'] )
+
+    elif command_dict['feature'] == 'ddg_monomer':
+        check_successful = lambda x : check_ddg_monomer_output( x['output_filename'] )
+
+    elif command_dict['feature'].replace( '_native' , '' ) == 'relax' and not 'rescore' in command_dict['feature']:
+        check_successful = lambda x : check_relax_output( ROSETTA_RELAX_OPTIONS['out:file:scorefile']( x['output_filename'].replace( '.silent' , '' ) ) , single_relax = single_relax )
+
+    return check_successful
+
 
 ################################################################################
 # SINGLE INPUT METHODS

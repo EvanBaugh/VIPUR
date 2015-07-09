@@ -1,0 +1,39 @@
+program: probe.2.12.071128, run Tue Jun 30 17:21:56 2015
+command: /home/evan/VIPUR_pipeline/VIPUR_feature_executables/probe -Q 583 -rad1.4 -C -out /home/evan/VIPUR_pipeline/VIPUR/example_input/P10275_1_VIPUR/P10275_1.pdb
+selection: external
+name: dots
+density: 16.0 dots per A^2
+probeRad: 1.400 A
+VDWrad: (r * 1.000) + 0.000 A
+        
+subgroup: extern dots
+atoms selected: 11
+potential dots: 2007
+potential area: 125.4 A^2
+  type                 #      %
+             tot:        0   0.0%
+
+   contact surface area: 0.0 A^2
+accessible surface area: 0.0 A^2
+
+program: probe.2.12.071128, run Tue Jun 30 17:21:56 2015
+command: /home/evan/VIPUR_pipeline/VIPUR_feature_executables/probe -Q 608 -rad1.4 -C -out /home/evan/VIPUR_pipeline/VIPUR/example_input/P10275_1_VIPUR/P10275_1.pdb
+selection: external
+name: dots
+density: 16.0 dots per A^2
+probeRad: 1.400 A
+VDWrad: (r * 1.000) + 0.000 A
+        
+subgroup: extern dots
+atoms selected: 11
+potential dots: 2199
+potential area: 137.4 A^2
+  type                 #      %
+  C external_dots       18   0.8%
+  N external_dots      175   8.0%
+  O external_dots        4   0.2%
+             tot:      197   9.0%
+
+   contact surface area: 12.3 A^2
+accessible surface area: 44.3 A^2
+

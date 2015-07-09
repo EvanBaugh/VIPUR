@@ -184,6 +184,33 @@ ROSETTA_SCORE_OPTIONS = {
 #    'score:weights' : 'test.wts'
     }
 
+################################################################################
+# PBS QUEUE SYSTEM INTERACTION
+
+# specific to the author's queuing system at NYU
+
+PBS_USER = 'ehb250'
+
+PBS_QUEUE_QUOTA = 20    # how many jobs can be in the queue simultaneously (excludes "R"unning jobs, that quota is set elsewhere now...)
+PBS_QUEUE_MONITOR_DELAY = 60    # seconds, how long to wait between checking the queue
+
+PBS_SERIAL_JOB_OPTIONS = {
+    'q' : 's48' ,
+    'l' : 'nodes=1:ppn=1,mem=6gb,walltime=12:00:00' ,
+    'o' : lambda x : x.replace( '.sh' , '.log.out' ) ,
+    'e' : lambda x : x.replace( '.sh' , '.log.err' ) ,
+    }
+
+PBS_PARALLEL_JOB_OPTIONS = {
+    'q' : 'p24' ,
+    'l' : 'nodes=3:ppn=12,mem=46gb,walltime=4:00:00' ,
+    'o' : lambda x : x.replace( '.sh' , '.log.out' ) ,
+    'e' : lambda x : x.replace( '.sh' , '.log.err' ) ,
+    }
+
+################################################################################
+# POST PROCESSING
+
 # for feature extraction
 ROSETTA_TERMS_TO_COMPARE = [
     'score' ,

@@ -399,9 +399,10 @@ if __name__ == '__main__':
     parser.add_option( '-w' , dest = 'write_numbering_map' ,
         default = True , action = 'store_false' ,
         help = 'boolean (default True), write the numbering map among the output files (provide -w for False)' )
-    parser.add_option( '-q' , dest = 'sequence_only' ,
-        default = False , action = 'store_true' ,
-        help = 'boolean (default False), run in \"sequence only\" mode, no structural features' )
+    # now scan automatically for sequence file...
+#    parser.add_option( '-q' , dest = 'sequence_only' ,
+#        default = False , action = 'store_true' ,
+#        help = 'boolean (default False), run in \"sequence only\" mode, no structural features' )
     parser.add_option( '--demo' , dest = 'demo' ,
         default = False , action = 'store_true' ,
         help = 'optional flag that overrides normal behaviour and runs the demo' )
@@ -418,7 +419,7 @@ if __name__ == '__main__':
     target_chain = options.target_chain
     sequence_filename = options.sequence_filename
     write_numbering_map = bool( options.write_numbering_map )
-    sequence_only = bool( options.sequence_only )
+#    sequence_only = bool( options.sequence_only )
     demo = bool( options.demo )
 
 

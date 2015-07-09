@@ -111,16 +111,21 @@ def create_executable_str( executable , args = [] , options = {} , out_filename 
     return perform
 
 # runs a commandline, usually combined with create_executable_str above
-def run_local_commandline( command ):
+def run_local_commandline( command , collect_stdout = False ):
     """
     Runs the explicit  <command>  by performing a system call with subprocess
     """
     # get the output
     print '\n'+ '='*80 + '\nPerforming system call:\n' + command + '\n' + '='*80 +'\n'
-    subprocess.call( command , shell = True )    # just the command, no output piping
+    if not collect_stdout:
+        subprocess.call( command , shell = True )    # just the command, no output piping
 
     # older call that pipes the output into Python for manipulation
-    #stdout = subprocess.Popen( command , shell = True , stdout = subprocess.PIPE , stdin = subprocess.PIPE , stderr = subprocess.STDOUT ).communicate()[0].strip()
+    else:
+        #stdout = subprocess.Popen( command , shell = True , stdout = subprocess.PIPE , stdin = subprocess.PIPE , stderr = subprocess.STDOUT ).communicate()[0].strip()
+        # shell = True, do NOT .split the command, = False, DO .split the command
+        stdout = subprocess.Popen( command , shell = True , stdout = subprocess.PIPE , stdin = subprocess.PIPE , stderr = subprocess.STDOUT ).communicate()[0]#.strip()    # for consistency
+        return stdout
 
 #######################
 # preprocessing methods
