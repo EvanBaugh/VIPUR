@@ -27,7 +27,12 @@ from helper_methods import create_executable_str , run_local_commandline
 # METHODS
 
 # support PyRosetta OR PyMOL
-def create_variant_protein_structures( pdb_filename , variants , chain , use_pyrosetta = USE_PYROSETTA ):
+def create_variant_protein_structures( pdb_filename , variants , chain , use_pyrosetta = USE_PYROSETTA , pymol_environment_setup = '' ):
+    # optionally run environment setup
+    if pymol_environment_setup:
+        print 'setting up environment variables'
+        run_local_commandline( pymol_environment_setup )
+
     # make sure the variants have been filtered
     if use_pyrosetta:
         # load the PDB as a pose
@@ -97,6 +102,8 @@ def create_variant_protein_structures( pdb_filename , variants , chain , use_pyr
         root_filename = pdb_filename.rstrip( '.pdb' )
         command = PATH_TO_PYMOL + ' -qcr ' + PATH_TO_VIPUR + '/pymol_make_variant_structure.py -- -p ' + pdb_filename + ' -m ' + ','.join( variants ) + ' -c ' + chain + ' -r ' + root_filename
 #            print command
+        if pymol_environment_setup:
+            command = pymol_environment_setup +'\n\n'+ command
         run_local_commandline( command )
             
         # reconstruct the names
@@ -162,7 +169,7 @@ def run_rosetta_ddg_monomer( pdb_filename , mut_filename , out_filename = '' , o
     command = ''
     # optionally move into the specific directory...
     if out_path:
-        command += 'cd '+ out_path +'; '
+        command += 'cd '+ out_path +'\n\n'
     
     command += create_executable_str( PATH_TO_ROSETTA_DDG_MONOMER , args = [] , options = ddg_monomer_options )
 

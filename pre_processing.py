@@ -29,7 +29,8 @@ from vipur_settings import ROSETTA_RELAX_OPTIONS
 def run_preprocessing( pdb_filename , variants_filename , prediction_filename = '' , out_path = '' ,
         target_chain = '' , sequence_filename = '' , write_numbering_map = True ,
         sequence_only = False , task_summary_filename = '' ,
-        single_relax = False , rosetta_relax_options = ROSETTA_RELAX_OPTIONS ):
+        single_relax = False , rosetta_relax_options = ROSETTA_RELAX_OPTIONS ,
+        pymol_environment_setup = '' ):
     # prepare output writing
     # support writing to  <out_path>
     #debug_time = [('start' , time.time())]
@@ -146,7 +147,7 @@ def run_preprocessing( pdb_filename , variants_filename , prediction_filename = 
             target_chain = extract_chains_from_pdb( pdb_filename )
             target_chain = target_chain[0]    # always a list
 
-        variant_structures = create_variant_protein_structures( pdb_filename , variants , target_chain )    
+        variant_structures = create_variant_protein_structures( pdb_filename , variants , target_chain , pymol_environment_setup = pymol_environment_setup )    
     
         # also store meta data, like filenames
         for i in variant_structures:

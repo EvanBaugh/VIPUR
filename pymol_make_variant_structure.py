@@ -83,7 +83,7 @@ def mutate_residue( selection , mutation , out_filename = '' , mutant_selection_
             position = i[1:-1]
             # use iterate to get the resn and chain
             # need the chain for selecting the proper position
-            pymol.cmd.iterate( mutant_selection_name + ' and resi ' + position + ' and name CA' , '(pymol.stored.native_resn , pymol.stored.native_chain) = (resn , chain)' )
+            pymol.cmd.iterate( mutant_selection_name + ' and resi ' + position + ' and name CA' , '(stored.native_resn , stored.native_chain) = (resn , chain)' )
             if not pymol.stored.native_resn == native:
                 raise IOError( 'input native as ' + i[:-1] + ' but it is actually ' + pymol.stored.native_resn + position + ' (chain ' + pymol.stored.native_chain +')' )
 #            elif pymol.stored.native_resn == mutant:

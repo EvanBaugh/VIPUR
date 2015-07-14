@@ -15,7 +15,7 @@ import time
 # bigger modules
 
 # custom modules
-from vipur_settings import PBS_USER , PBS_QUEUE_QUOTA , PBS_QUEUE_MONITOR_DELAY , PBS_SERIAL_JOB_OPTIONS , PBS_PARALLEL_JOB_OPTIONS
+from vipur_settings import PBS_USER , PBS_ENVIRONMENT_SETUP , PBS_QUEUE_QUOTA , PBS_QUEUE_MONITOR_DELAY , PBS_SERIAL_JOB_OPTIONS , PBS_PARALLEL_JOB_OPTIONS
 from helper_methods import run_local_commandline , create_executable_str
 
 from pre_processing import *
@@ -98,6 +98,11 @@ def run_VIPUR_PBS( pdb_filename = '' , variants_filename = '' ,
         this_out_path = get_root_filename( i[0] ) +'_VIPUR'    # directory to create
         target_proteins.append( i + [True , this_out_path] )
 
+    # setup environment variables BEFORE pre processing
+    # no need to setup a command, just run it
+    if PBS_ENVIRONMENT_SETUP:
+        print 'setting up environment variables'
+        run_local_commandline( PBS_ENVIRONMENT_SETUP )
 
     # pre processing
     task_summaries = []
@@ -112,17 +117,18 @@ def run_VIPUR_PBS( pdb_filename = '' , variants_filename = '' ,
             task_summary_filename = run_preprocessing( i[0] , i[1] ,
                 sequence_only = i[2] , out_path = i[3] ,
                 task_summary_filename = task_summary_filename ,
-                write_numbering_map = write_numbering_map , single_relax = single_relax )
+                write_numbering_map = write_numbering_map , single_relax = single_relax ,
+                pymol_environment_setup = PBS_ENVIRONMENT_SETUP )
 
 
         # modify for PBS script
         task_summary = load_task_summary( task_summary_filename )
-        for j in xrange( task_summary['commands'] ):
+        for j in xrange( len( task_summary['commands'] ) ):
             pbs_options = {}
 
-            command = task_summary['commands'][j]
+            command = task_summary['commands'][j]['command']
 
-            # add for relax            
+            # add for relax
             if task_summary['commands'][j]['feature'].replace( '_native' , '' ) == 'relax' and not 'rescore' in task_summary['commands'][j]['feature']:
                 command = command.replace( '.linuxgccrelease' , '.mpi.linuxgccrelease' )
                 command = 'module load mvapich2/gnu/1.8.1; /share/apps/mvapich2/1.8.1/gnu/bin/mpiexec -n 36 ' + command
@@ -135,10 +141,10 @@ def run_VIPUR_PBS( pdb_filename = '' , variants_filename = '' ,
                 pbs_options.update( PBS_SERIAL_JOB_OPTIONS )
 
             # put "cd" in front
-            command = ('cd '+ i[3] +';')*bool( i[3] ) + command
+            command = ('cd '+ i[3] +'\n\n')*bool( i[3] ) + command
             
             # modify the task summary
-            task_summary['commands'][j] = command
+            task_summary['commands'][j]['command'] = command
             
             
             # actually write the script...
@@ -152,17 +158,17 @@ def run_VIPUR_PBS( pdb_filename = '' , variants_filename = '' ,
             
             # use the script filename as the source for any log files
             # control the output and error paths
-            for i in pbs_options.keys():
-                if '__call__' in dir( pbs_options[i] ):
-                    pbs_options[i] = pbs_options[i]( script_filename )
-            
+            for k in pbs_options.keys():
+                if '__call__' in dir( pbs_options[k] ):
+                    pbs_options[k] = pbs_options[k]( script_filename )
+
             # also generate the pbs call? might as well, keep it simple...
             task_summary['commands'][j]['qsub_command'] = create_executable_str( 'qsub' , [script_filename] , pbs_options )
 
         # rewrite the task summary
-        write_task_summary( task_summary_filename )
+        write_task_summary( task_summary , task_summary_filename )
 
-        task_summaries.append( task_summary_filename )
+        task_summaries.append( task_summary )#_filename )
 
 
     # run them all
@@ -186,9 +192,14 @@ def run_VIPUR_task_summaries_PBS( task_summaries , single_relax = False , delete
     # queue command can be derived from task itself
     # this method will run...until all jobs are complete
     
+    # reload? really how this should be done...
+    for i in xrange( len( task_summaries ) ):
+        if isinstance( task_summaries[i] , str ) and os.path.isfile( task_summaries[i] ):
+            task_summaries[i] = load_task_summary( task_summaries[i] )
+    
     # make a list of ALL jobs instead of per protein tasks - all commands have "cd" if there is an "out_path"
     # as a reference, need to track attempts etc. directly, rewrite task summaries frequently
-    non_rescore_tasks = sum( [[(i , j) for j in xrange( len( task_summaries[i]['commands'] ) )] for i in task_summaries.keys()] , [] )
+    non_rescore_tasks = sum( [[(i , j) for j in xrange( len( task_summaries[i]['commands'] ) )] for i in xrange( len( task_summaries ) )] , [] )
     rescore_tasks = [i for i in non_rescore_tasks if 'rescore' in task_summaries[i[0]]['commands'][i[1]]['feature']]
     # only rescore once ALL are complete
     non_rescore_tasks = [i for i in non_rescore_tasks if not i in rescore_tasks]

@@ -12,21 +12,30 @@ When setting up VIPUR, make sure you provide all the paths needed
 # PATHS
 
 PATH_TO_VIPUR = '/home/evan/VIPUR_pipeline/VIPUR'    # remember, this should be blank each push
+#PATH_TO_VIPUR = '/scratch/ehb250/VIPUR_pipeline/VIPUR'    # remember, this should be blank each push
 PATH_TO_VIPUR_EXECUTABLES = '/home/evan/VIPUR_pipeline/VIPUR_feature_executables' #/VIPUR_feature_executables'
 
 PATH_TO_PSIBLAST = PATH_TO_VIPUR_EXECUTABLES + '/psiblast_blast+2.2.25'
+#PATH_TO_PSIBLAST = '/home/ehb250/MEC_files/ncbi-blast-2.2.25+/bin/psiblast'#PATH_TO_VIPUR_EXECUTABLES + '/psiblast_blast+2.2.25'
 PATH_TO_BLAST_DATABASE = '/home/evan/bio/databases/blast/nr/nr'
+#PATH_TO_BLAST_DATABASE = '/scratch/ehb250/nr_db/nr'#/home/evan/bio/databases/blast/nr/nr'
 PATH_TO_PROBE = PATH_TO_VIPUR_EXECUTABLES + '/probe'
+#PATH_TO_PROBE = '/home/ehb250/MEC_files/probe/probe'#PATH_TO_VIPUR_EXECUTABLES + '/probe'
 
 LICENSE = ''
 
 PATH_TO_ROSETTA_DATABASE = PATH_TO_VIPUR_EXECUTABLES + '/rosetta_database'
+#PATH_TO_ROSETTA_DATABASE = '/scratch/ehb250/rosetta-3.4/rosetta_database'#PATH_TO_VIPUR_EXECUTABLES + '/rosetta_database'
 PATH_TO_ROSETTA_DDG_MONOMER = PATH_TO_VIPUR_EXECUTABLES + '/ddg_monomer_r54167.64bit.linuxgccrelease'
+#PATH_TO_ROSETTA_DDG_MONOMER = '/scratch/ehb250/rosetta-3.4/rosetta_source/bin/ddg_monomer.linuxgccrelease'#PATH_TO_VIPUR_EXECUTABLES + '/ddg_monomer_r54167.64bit.linuxgccrelease'
 PATH_TO_ROSETTA_RELAX = PATH_TO_VIPUR_EXECUTABLES + '/relax_r54167.64bit.linuxgccrelease'
+#PATH_TO_ROSETTA_RELAX = '/scratch/ehb250/rosetta-3.4/rosetta_source/bin/relax.mpi.linuxgccrelease'#PATH_TO_VIPUR_EXECUTABLES + '/relax_r54167.64bit.linuxgccrelease'
 PATH_TO_ROSETTA_SCORE = PATH_TO_VIPUR_EXECUTABLES + '/score_r54167.64bit.linuxgccrelease'
+#PATH_TO_ROSETTA_SCORE = '/scratch/ehb250/rosetta-3.4/rosetta_source/bin/score.linuxgccrelease'#PATH_TO_VIPUR_EXECUTABLES + '/score_r54167.64bit.linuxgccrelease'
 
 # alternate method for making variant structures, needs both paths
 PATH_TO_PYMOL = 'pymol'
+#PATH_TO_PYMOL = '/share/apps/pymol/1.5.0.1/bin/pymol'
 
 # check for PyRosetta, used for making mutant structures
 USE_PYROSETTA = False
@@ -190,6 +199,9 @@ ROSETTA_SCORE_OPTIONS = {
 # specific to the author's queuing system at NYU
 
 PBS_USER = 'ehb250'
+
+# any commands that are needed to setup the environment for preprocessing
+PBS_ENVIRONMENT_SETUP = 'module load pymol'
 
 PBS_QUEUE_QUOTA = 20    # how many jobs can be in the queue simultaneously (excludes "R"unning jobs, that quota is set elsewhere now...)
 PBS_QUEUE_MONITOR_DELAY = 60    # seconds, how long to wait between checking the queue
