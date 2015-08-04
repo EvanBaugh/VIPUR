@@ -169,7 +169,7 @@ def run_rosetta_ddg_monomer( pdb_filename , mut_filename , out_filename = '' , o
     command = ''
     # optionally move into the specific directory...
     if out_path:
-        command += 'cd '+ out_path +'\n\n'
+        command += 'cd '+ out_path +'; '#\n\n'
     
     command += create_executable_str( PATH_TO_ROSETTA_DDG_MONOMER , args = [] , options = ddg_monomer_options )
 
