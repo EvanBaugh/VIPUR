@@ -248,7 +248,8 @@ def run_postprocessing( task_summary_filename , sequence_only = False ):
     # write output predictions etc.
     prediction_filename = task_summary['filenames']['prediction_filename']
     if not prediction_filename:
-        prediction_filename = task_summary['filenames']['pdb_filename'].rstrip( '.pdb' ) + '.predictions'
+        prediction_filename = task_summary['filenames']['pdb_filename']
+        prediction_filename = prediction_filename.replace( '.pdb' , '' ).replace( '.fa' , '' ).replace( '.fasta' , '' ) + '.predictions'
         task_summary['filenames']['prediction_filename'] = prediction_filename
 
     f = open( prediction_filename , 'w' )
