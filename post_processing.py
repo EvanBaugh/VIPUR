@@ -199,7 +199,7 @@ def run_postprocessing( task_summary_filename , sequence_only = False ):
             predictions[i] = '\t'.join( [i , 'failed: ' + task_summary['variants'][i]['failed'] , str( 0 )] )
             continue
 
-        print 'Variant: ' + i
+        print 'Variant: ' + i.split( '/' )[-1]
         if sequence_only:
             # just the sequence only classifier
             # standardize output, add in empty values
