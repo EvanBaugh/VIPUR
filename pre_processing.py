@@ -409,6 +409,10 @@ def load_task_summary( task_summary_filename ):
         elif i[0] == 'command':
             command = i[1].strip().split( ',' )
             extra = dict( [j.split( ':' ) for j in command[:-1]] )
+            # no, should be simple!
+            # treat qsub command special, it uses ":" and ","
+#            extra = [j.split( ':' ) for j in command[:-1]]
+#            extra = dict( [(j[0] , ':'.join( j[1:] ))for j in extra] )
             extra['command'] = command[-1]
             commands.append( extra )
 

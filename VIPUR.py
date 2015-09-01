@@ -368,7 +368,7 @@ print disclaimer
 
 # credits to PROBE, BLAST+, Rosetta)
 credits = 'VIPUR also relies on:\nPROBE\nWord, et. al. Visualizing and Quantifying Molecular Goodness-of-Fit:\nSmall-probe Contact Dots with Explicit Hydrogens.\nJ. Mol. Biol. 285, 1711-1733 (1999).\n\nBLAST+\nCamacho, C. et al. BLAST+: architecture and applications.\nBMC Bioinformatics 10(421) (2009).'
-print credits
+print credits +'\n\n\n'    # '=' line across?
 
 
 if __name__ == '__main__':
@@ -424,14 +424,14 @@ if __name__ == '__main__':
     demo = bool( options.demo )
 
 
-    run_VIPUR_serially( pdb_filename = pdb_filename , variants_filename = variants_filename ,
-        out_path = out_path , write_numbering_map = write_numbering_map ,
-        single_relax = False , delete_intermediate_relax_files = True ,
-        demo = demo )
-#    run_VIPUR_PBS( pdb_filename = pdb_filename , variants_filename = variants_filename ,
+#    run_VIPUR_serially( pdb_filename = pdb_filename , variants_filename = variants_filename ,
 #        out_path = out_path , write_numbering_map = write_numbering_map ,
 #        single_relax = False , delete_intermediate_relax_files = True ,
 #        demo = demo )
+    run_VIPUR_PBS( pdb_filename = pdb_filename , variants_filename = variants_filename ,
+        out_path = out_path , write_numbering_map = write_numbering_map ,
+        single_relax = True , delete_intermediate_relax_files = True ,
+        demo = demo )
 
 #    quit()
 

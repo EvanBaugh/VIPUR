@@ -19,6 +19,8 @@ from vipur_settings import PBS_USER , PBS_ENVIRONMENT_SETUP , PBS_QUEUE_QUOTA , 
 from helper_methods import run_local_commandline , create_executable_str
 
 from pre_processing import *
+from run_methods import determine_check_successful_function
+from rosetta_feature_generation import remove_intermediate_ddg_monomer_files
 from post_processing import *
 
 ################################################################################
@@ -124,21 +126,22 @@ def run_VIPUR_PBS( pdb_filename = '' , variants_filename = '' ,
         # modify for PBS script
         task_summary = load_task_summary( task_summary_filename )
         for j in xrange( len( task_summary['commands'] ) ):
-            pbs_options = {}
+#            pbs_options = {}
 
             command = task_summary['commands'][j]['command']
 
             # add for relax
             if task_summary['commands'][j]['feature'].replace( '_native' , '' ) == 'relax' and not 'rescore' in task_summary['commands'][j]['feature']:
-                command = command.replace( '.linuxgccrelease' , '.mpi.linuxgccrelease' )
+                if not '.mpi.linuxgccrelease' in command:
+                    command = command.replace( '.linuxgccrelease' , '.mpi.linuxgccrelease' )
                 command = 'module load mvapich2/gnu/1.8.1;/share/apps/mvapich2/1.8.1/gnu/bin/mpiexec -n 36 ' + command
                 command += ' -jd2:mpi_file_buf_job_distributor false'
                 command += ' -run:multiple_processes_writing_to_one_directory'
                 
                 # also use the parallel options
-                pbs_options.update( PBS_PARALLEL_JOB_OPTIONS )
+                pbs_options = 'parallel'#.update( PBS_PARALLEL_JOB_OPTIONS )
             else:
-                pbs_options.update( PBS_SERIAL_JOB_OPTIONS )
+                pbs_options = 'serial'#.update( PBS_SERIAL_JOB_OPTIONS )
 
             # put "cd" in front
 #            command = ('#!/bin/bash\n\ncd '+ i[3] +'\n\n')*bool( i[3] ) + command +'\n\n'
@@ -150,21 +153,29 @@ def run_VIPUR_PBS( pdb_filename = '' , variants_filename = '' ,
             
             # actually write the script...
             # don't worry about optional #PBS header info
-            script_filename = i[3] + '/'*bool( i[3] ) + get_root_filename( i[0] ).split( '/' )[-1] +'.'+ task_summary['commands'][j]['feature'] + '.pbs_script.sh'
+#            print i    # debug
+            # need to add the variant? no, just use the output_filename for this
+            script_filename = i[3] + '/'*bool( i[3] ) + get_root_filename( task_summary['commands'][j]['output_filename'].split( '/' )[-1] ) +'.'+ task_summary['commands'][j]['feature'] + '.pbs_script.sh'
             task_summary['commands'][j]['script_filename'] = script_filename
-            
+#            if 'variant' in task_summary['commands'][j].keys():
+#                print task_summary['commands'][j]['variant']
+#            print script_filename    # debug
+#            raw_input( 'continue?' )    # debug
+
             f = open( script_filename , 'w' )
             f.write( PBS_BASH_SCRIPT( command ) )
             f.close()
             
             # use the script filename as the source for any log files
             # control the output and error paths
-            for k in pbs_options.keys():
-                if '__call__' in dir( pbs_options[k] ):
-                    pbs_options[k] = pbs_options[k]( script_filename )
+#            for k in pbs_options.keys():
+#                if '__call__' in dir( pbs_options[k] ):
+#                    pbs_options[k] = pbs_options[k]( script_filename )
 
             # also generate the pbs call? might as well, keep it simple...
-            task_summary['commands'][j]['qsub_command'] = create_executable_str( 'qsub' , [script_filename] , pbs_options )
+#            task_summary['commands'][j]['qsub_command'] = create_executable_str( 'qsub' , [script_filename] , pbs_options )
+            # no, uses ":" and "," characters...
+            task_summary['commands'][j]['queue'] = pbs_options
 
         # rewrite the task summary
         write_task_summary( task_summary , task_summary_filename )
@@ -182,6 +193,8 @@ def run_VIPUR_PBS( pdb_filename = '' , variants_filename = '' ,
     for i in xrange( len( task_summaries ) ):
         # always okay to rerun post processing...should not make any difference
         sequence_only = target_proteins[i][2]
+#        print sequence_only , 'post processing'    # debug
+        print '\n\n\nExtracting and Analyzing the Results:\n\n'
         task_summaries[i] = run_postprocessing( task_summaries[i] , sequence_only = sequence_only )
 
     return task_summaries
@@ -209,7 +222,8 @@ def run_VIPUR_task_summaries_PBS( task_summaries , single_relax = False , delete
     run_VIPUR_tasks_PBS( task_summaries , non_rescore_tasks )
     
     # run the rescore tasks
-    run_VIPUR_tasks_PBS( task_summaries , rescore_tasks )
+    if rescore_tasks:
+        run_VIPUR_tasks_PBS( task_summaries , rescore_tasks )
     
     # return anything?
     # task summaries should be updated with all the necessary files...
@@ -226,12 +240,14 @@ def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_mo
     # should running_or_queued be saved? written to file?
     running_or_queued = {}
     rounds = 0
+    all_completed_jobs = []    # prevents annoying bulk output, only see it the first time it completes
+#    raw_input( 'start submitting + monitoring?' )    # debug
     while not len( completed ) == len( task_list ):
         rounds += 1
         print '\n\nQUEUE MONITOR ROUND ' + str( rounds )
         
         # debug
-        print running_or_queued
+#        print running_or_queued
     
         # check queue status
         queue_status = get_pbs_queue_status()
@@ -257,7 +273,7 @@ def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_mo
                     ('success' in task_summaries[i[0]]['commands'][i[1]]['run'] or
                     'failure' in task_summaries[i[0]]['commands'][i[1]]['run']) )
                 ]
-            print str( len( jobs_to_run ) ) + ' jobs left to run...'
+            print str( len( jobs_to_run ) ) + ' jobs left to run...(after the currently running jobs complete)'
             
             # only the next few
             for i in jobs_to_run[:available_space]:
@@ -309,10 +325,24 @@ def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_mo
 
             
                 # submit this script using a queue command
-                pbs_command = command_dict['qsub_command']    # SHOULD already have an abspath to the script
+#                pbs_command = command_dict['qsub_command']    # SHOULD already have an abspath to the script
+                # generate it here instead
+                pbs_options = {}
+                if command_dict['queue'] == 'parallel':
+                    pbs_options.update( PBS_PARALLEL_JOB_OPTIONS )
+                elif command_dict['queue'] == 'serial':
+                    pbs_options.update( PBS_SERIAL_JOB_OPTIONS )
+                # make sure they are satisfied
+                script_filename = command_dict['script_filename']
+                for k in pbs_options.keys():
+                    if '__call__' in dir( pbs_options[k] ):
+                        pbs_options[k] = pbs_options[k]( script_filename )
+
+                pbs_command = create_executable_str( 'qsub' , [script_filename] , pbs_options )
                 new_job_id = run_local_commandline( pbs_command , collect_stdout = True )
                 new_job_id = new_job_id[:new_job_id.find( '.' )]
                 print 'submitted ' + new_job_id
+ #               print 'it was ' , task_summaries[i[0]].keys()    # debug
                 
                 # save the job id
                 # assume its queue
@@ -324,18 +354,21 @@ def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_mo
         # debug, need to know
         running_jobs = len( [i for i in queue_status.values() if i in ['R']] )
         if running_jobs:
-            print str( running_jobs ) + ' are still running...'
+            print str( running_jobs ) + ' are still running...(excluding the jobs just submitted and including your other jobs)'
         
         # assess outcome of completed jobs
 #        still_running = 0
-        for job_id in queue_status.keys():
+        for job_id in sorted( queue_status.keys() ):    # sort in numerical order, right?
             # debug
-            print '\t'+ job_id , queue_status[job_id] , job_id in running_or_queued.keys()
+            if not job_id in all_completed_jobs:
+                print '\t'+ job_id , queue_status[job_id]# , job_id in running_or_queued.keys()
+                # could just skip it all now?
         
             if queue_status[job_id] == 'C' and job_id in running_or_queued.keys():
                 task_id = running_or_queued[job_id][0]
                 command_index = running_or_queued[job_id][1]
                 command_dict = task_summaries[task_id]['commands'][command_index]
+#                print 'ooh,' , task_id , 'just finished, could be successful too!'    # debug
 
                 check_successful = determine_check_successful_function( command_dict , single_relax = single_relax )
 
@@ -344,9 +377,11 @@ def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_mo
                 failure_summary = ''
                 if isinstance( success , bool ):
                     complete = success
+#                    print complete , ' indeed '   # debug
                 elif len( success ) > 1 and isinstance( success[0] , bool ):
                     complete = success[0]
                     failure_summary += ' '+ ';'.join( [str( j ) for j in success[1:]] ) +' '
+                    print complete , failure_summary , 'try again?'    # debug
  
                 # track the number of attempts?
                 # try until failure - how many times?
@@ -354,17 +389,22 @@ def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_mo
                 if 'run' in command_dict.keys() and command_dict['run'] and not 'success' in command_dict['run'] and not 'failure' in command_dict['run']:
                     tries = int( command_dict['run'] )
                 tries += 1
+                print tries , 'attempts so far'    # debug
                 
                 if tries >= max_pbs_tries:
                     # its a failure
                     print job_id + ' completed successfully'*complete + (' failed with ' + str( tries ) + ' attempts')*(not complete)
                     failure_summary = 'success'*complete + (str( tries ) +' tries;failure ' + failure_summary)*(not complete)
+                elif complete:
+                    print job_id + ' completed successfully'
+                    failure_summary = 'success' #+ str( tries ) + ' tries'
                 else:
                     # record the number of tries
                     print job_id + ' completed' + ' successfully'*complete
                     failure_summary = str( tries )
                 
                 # update the record
+                print 'updating with: ' + failure_summary    # debug
                 task_summaries[task_id]['commands'][command_index]['run'] = failure_summary
             
                 # optionally cleanup
@@ -373,14 +413,19 @@ def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_mo
                     remove_intermediate_ddg_monomer_files()
 
                 # jobs that have since been completed - consider them complete?
-                completed.append( running_or_queued[job_id] )
+                completed.append( running_or_queued[job_id] )    # good, so this grows
                 del running_or_queued[job_id]
-                
+                # remove jobs to run?
+#                print 'updating the status...'    # debug
+
                 # write out "completed"? or "running_or_queued"?
 
 #            else:
 #                still_running += 1
 #        print str( still_running) + ' jobs still running (or queued)...'
+            if queue_status[job_id] == 'C' and not job_id in all_completed_jobs:
+                all_completed_jobs.append( job_id )    # prevent redundant update info
+
 
         # update task_summaries e.g. write them!
         # modified: so the task summary records its own name...bah!
@@ -394,8 +439,12 @@ def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_mo
 
         
         # pause...
-        print 'waiting ' + str( PBS_QUEUE_MONITOR_DELAY ) +'s...'
-        time.sleep( PBS_QUEUE_MONITOR_DELAY )
+        print '\n' , len( completed ) , 'completed' , len( task_list ) , 'tasks'    # debug
+        if len( completed ) <= len( task_list ):    # no need for edge-case end wait
+            print 'waiting ' + str( PBS_QUEUE_MONITOR_DELAY ) +'s...'
+            time.sleep( PBS_QUEUE_MONITOR_DELAY )
+
+#        raw_input( 'continue to next round?' )    # debug
 
     # return anything?
     # write one last time?

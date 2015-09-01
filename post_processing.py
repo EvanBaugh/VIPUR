@@ -199,7 +199,7 @@ def run_postprocessing( task_summary_filename , sequence_only = False ):
             predictions[i] = '\t'.join( [i , 'failed: ' + task_summary['variants'][i]['failed'] , str( 0 )] )
             continue
 
-        print 'Variant: ' + i
+        print 'Variant: ' + i.split( '/' )[-1]
         if sequence_only:
             # just the sequence only classifier
             # standardize output, add in empty values
@@ -248,7 +248,8 @@ def run_postprocessing( task_summary_filename , sequence_only = False ):
     # write output predictions etc.
     prediction_filename = task_summary['filenames']['prediction_filename']
     if not prediction_filename:
-        prediction_filename = task_summary['filenames']['pdb_filename'].rstrip( '.pdb' ) + '.predictions'
+        prediction_filename = task_summary['filenames']['pdb_filename']
+        prediction_filename = prediction_filename.replace( '.pdb' , '' ).replace( '.fa' , '' ).replace( '.fasta' , '' ) + '.predictions'
         task_summary['filenames']['prediction_filename'] = prediction_filename
 
     f = open( prediction_filename , 'w' )
