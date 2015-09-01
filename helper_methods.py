@@ -92,7 +92,7 @@ def create_executable_str( executable , args = [] , options = {} , out_filename 
         raise IOError( 'variable  <executable>  must be a string!' )
         
     # setup the options and args
-    options = ''.join( [' -' + str( i ) + ( ' ' + str( options[i] ) )*bool( options[i] ) for i in options.keys()] )
+    options = ''.join( [' -' + ('-')*bool( isinstance( i , str ) and len( i ) > 1 ) + str( i ) + ( ' ' + str( options[i] ) )*bool( options[i] ) for i in options.keys()] )
     args = ''.join( [' ' + str( i ) for i in args] )
     
     # choose general format
