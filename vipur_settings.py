@@ -226,6 +226,25 @@ PBS_PARALLEL_JOB_OPTIONS = {
     }
 
 ################################################################################
+# SLURM QUEUE SYSTEM INTERACTION
+
+SLURM_USER = 'ebaugh'
+
+SLURM_QUEUE_QUOTA = 10
+SLURM_QUEUE_MONITOR_DELAY = 60    # less then this?
+
+SLURM_BASH_SCRIPT = lambda x : '#!/bin/bash\n\n' + x.replace( ';' , '\n\n' ) +'\n\n'
+
+SLURM_SERIAL_JOB_OPTIONS = {
+#    'n' : ,    # how many to request? is it actually threaded? just do 1 for now, later we can combine multiple for arrays or array like implementation
+    # lol, these two are the same
+    'o' : lambda x : x.replace( '.sh' , '.log.out' ) ,
+    'e' : lambda x : x.replace( '.sh' , '.log.err' ) ,
+    }
+
+# no parallel options for now, Rosetta does not optimize this anyway...so SLURM's interface should make Rosetta MPI obsolete other than resource sharing...
+
+################################################################################
 # POST PROCESSING
 
 # for feature extraction
