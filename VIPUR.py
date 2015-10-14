@@ -424,14 +424,14 @@ if __name__ == '__main__':
     demo = bool( options.demo )
 
 
-#    run_VIPUR_serially( pdb_filename = pdb_filename , variants_filename = variants_filename ,
-#        out_path = out_path , write_numbering_map = write_numbering_map ,
-#        single_relax = False , delete_intermediate_relax_files = True ,
-#        demo = demo )
-    run_VIPUR_PBS( pdb_filename = pdb_filename , variants_filename = variants_filename ,
+    run_VIPUR_serially( pdb_filename = pdb_filename , variants_filename = variants_filename ,
         out_path = out_path , write_numbering_map = write_numbering_map ,
-        single_relax = True , delete_intermediate_relax_files = True ,
+        single_relax = False , delete_intermediate_relax_files = True ,
         demo = demo )
+#    run_VIPUR_PBS( pdb_filename = pdb_filename , variants_filename = variants_filename ,
+#        out_path = out_path , write_numbering_map = write_numbering_map ,
+#        single_relax = True , delete_intermediate_relax_files = True ,
+#        demo = demo )
 
 #    quit()
 
