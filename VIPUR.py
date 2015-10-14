@@ -99,6 +99,8 @@ Note: both relax and ddg_monomer perform stochastic searches and may output
 slightly different energy values on evaluation with different random seeds
 VIPUR has been benchmarked using the Rosetta 3.4 release version (54167)
 
+Benchmarked on revision r54167.
+
 Leaver-Fay, A. et al. ROSETTA3: An object-oriented software suite for
 the simulation and design of macromolecules.
 Methods in Enzymology 487, 548-574 (2011).
