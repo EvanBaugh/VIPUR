@@ -165,7 +165,7 @@ ROSETTA_DDG_MONOMER_OPTIONS = {
 ROSETTA_RELAX_OPTIONS = {
     'database' : PATH_TO_ROSETTA_DATABASE ,
 
-    'nstruct' : 50 ,    # 50!
+    'nstruct' : 5 ,    # 50!
 #    'nstruct' : 50 ,
     'relax:fast' : '' ,
     'evaluation:gdtmm' : 'true' ,

@@ -410,6 +410,10 @@ if __name__ == '__main__':
         default = False , action = 'store_true' ,
         help = 'optional flag that overrides normal behaviour and runs the demo' )
 
+    parser.add_option( '-r' , dest = 'run_mode' ,
+        default = 'serial' ,
+        help = 'choose how to run + manage VIPUR jobs: serial, PBS, Slurm' )
+
     # optionally allow specification of input paths
     # well...do this another day...
 
@@ -424,18 +428,22 @@ if __name__ == '__main__':
     write_numbering_map = bool( options.write_numbering_map )
 #    sequence_only = bool( options.sequence_only )
     demo = bool( options.demo )
+    run_mode = options.run_mode
 
 
-    run_VIPUR_serially( pdb_filename = pdb_filename , variants_filename = variants_filename ,
-        out_path = out_path , write_numbering_map = write_numbering_map ,
-        single_relax = False , delete_intermediate_relax_files = True ,
-        demo = demo )
-#    run_VIPUR_PBS( pdb_filename = pdb_filename , variants_filename = variants_filename ,
-#        out_path = out_path , write_numbering_map = write_numbering_map ,
-#        single_relax = True , delete_intermediate_relax_files = True ,
-#        demo = demo )
+    if run_mode.lower() == 'serial':
+        run_VIPUR_serially( pdb_filename = pdb_filename , variants_filename = variants_filename ,
+            out_path = out_path , write_numbering_map = write_numbering_map ,
+            single_relax = False , delete_intermediate_relax_files = True ,
+            demo = demo )
+    elif run_mode.lower() == 'pbs':
+        run_VIPUR_PBS( pdb_filename = pdb_filename , variants_filename = variants_filename ,
+            out_path = out_path , write_numbering_map = write_numbering_map ,
+            single_relax = True , delete_intermediate_relax_files = True ,
+            demo = demo )
+#    elif run_mode.lower() == 'slurm':
 
-#    quit()
+#    quit()    # why is this here?
 
 
 """
