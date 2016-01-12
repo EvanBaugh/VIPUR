@@ -1,7 +1,0 @@
-variant	label prediction	confidence score	structure-only label prediction	structure-only confidence score	sequence-only label prediction	sequence-only confidence score	exposure	essential score	ddG prediction ~kcal/mol	interpretation	top 3 ranked features
-2C35_A101W	deleterious	0.963800415508	deleterious	0.970326531204	deleterious	0.836738099042	surface	-0.00652611569614	8.344	structural conservation	side chains cannot "pack" against each other (clashes) [ddg_fa_rep], highly destabilizing [quartile_scoreQ1], disrupted side chain contact (ex. salt bridge) [quartile_fa_pairQ1]
-2C35_R84P	deleterious	0.952808334076	deleterious	0.955521537314	deleterious	0.810236268648	surface	-0.00271320323821	7.382	structural conservation	highly destabilizing [quartile_scoreQ1], side chains cannot "pack" against each other (clashes) [ddg_fa_rep], change to/from proline not tolerated, likely conserved [quartile_pro_closeQ2]
-2C35_E14R	deleterious	0.582376096465	neutral	0.228290341701	deleterious	0.84446547601	interior	0.354085754764	0.088	structural conservation	highly destabilizing [quartile_scoreQ1], unfavorable change in amino acid chemical properties [aminochange], unfavorable amino acid? [quartile_p_aa_ppQ3]
-2C35_E14E	native and variant are identical (?); skipping "E14E"	0
-2C35_C14R	wrong native amino acid! found "E" in the pdb; not "C"	0
-2C35_C10G	residue "10" is not in the PDB; skipping "C10G"	0
