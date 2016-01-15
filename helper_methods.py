@@ -203,7 +203,7 @@ def check_variants( variants , sequence , residue_map , protein_letters = PROTEI
         # check for native errors
         pdb_aa = sequence[residue_map[position]]
         if not native == pdb_aa:
-            exit_message = 'wrong native amino acid! found \"' + pdb_aa + '\" in the pdb; not \"' + native + '\"'
+            exit_message = 'wrong native amino acid! found \"' + pdb_aa + '\" in the pdb; not \"' + native + '\"; skipping \"' + variation + '\"'
             print exit_message
             failed_variants[variation] = exit_message
             continue

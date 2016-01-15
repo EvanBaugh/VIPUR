@@ -66,7 +66,7 @@ def run_VIPUR_PBS( pdb_filename = '' , variants_filename = '' ,
 #        print [i for i in pdb_filenames if os.path.isfile( pdb_filename +'/'+ get_root_filename( i ) + variants_filename )]
 
         print str( len( pdb_filenames ) ) + ' pairs found'
-        print str( len( fa_filenames ) ) + ' pairs found (for sequence only)'
+        print str( len( fa_filenames ) ) + ' pairs found for sequence only mode'
 
         # go there...
 #        os.chdir( pdb_filename )
@@ -264,7 +264,7 @@ def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_mo
         
         # launch next jobs in available slots
         if available_space:
-            print str( queue_space_occupied ) + ' jobs queued, ' + str( available_space ) + ' open \"positions\"'
+            print str( queue_space_occupied ) + ' jobs queued or running, could submit up to ' + str( available_space ) + ' more'
             # choose the next job
             jobs_to_run = [i for i in task_list if
                 not i in completed and
@@ -273,7 +273,7 @@ def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_mo
                     ('success' in task_summaries[i[0]]['commands'][i[1]]['run'] or
                     'failure' in task_summaries[i[0]]['commands'][i[1]]['run']) )
                 ]
-            print str( len( jobs_to_run ) ) + ' jobs left to run...(after the currently running jobs complete)'
+            print str( len( jobs_to_run ) ) + ' jobs still need to finish (after the currently running jobs complete)'
             
             # only the next few
             for i in jobs_to_run[:available_space]:
@@ -439,7 +439,7 @@ def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_mo
 
         
         # pause...
-        print '\n' , len( completed ) , 'completed' , len( task_list ) , 'tasks'    # debug
+        print '\n' , len( completed ) , 'completed' , len( task_list ) , 'tasks remaining'    # debug
         if len( completed ) <= len( task_list ):    # no need for edge-case end wait
             print 'waiting ' + str( PBS_QUEUE_MONITOR_DELAY ) +'s...'
             time.sleep( PBS_QUEUE_MONITOR_DELAY )

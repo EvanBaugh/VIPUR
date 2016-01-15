@@ -237,7 +237,7 @@ def run_VIPUR_serially( pdb_filename = '' , variants_filename = '' ,
 #        print [i for i in pdb_filenames if os.path.isfile( pdb_filename +'/'+ get_root_filename( i ) + variants_filename )]
 
         print str( len( pdb_filenames ) ) + ' pairs found'
-        print str( len( fa_filenames ) ) + ' pairs found (for sequence only)'
+        print str( len( fa_filenames ) ) + ' pairs found for sequence only mode'
 
         # go there...
 #        os.chdir( pdb_filename )

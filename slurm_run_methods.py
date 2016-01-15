@@ -71,7 +71,7 @@ def run_VIPUR_SLURM( pdb_filename = '' , variants_filename = '' ,
 #        print [i for i in pdb_filenames if os.path.isfile( pdb_filename +'/'+ get_root_filename( i ) + variants_filename )]
 
         print str( len( pdb_filenames ) ) + ' pairs found'
-        print str( len( fa_filenames ) ) + ' pairs found (for sequence only)'
+        print str( len( fa_filenames ) ) + ' pairs found for sequence only mode'
 
         # go there...
 #        os.chdir( pdb_filename )
@@ -254,7 +254,7 @@ def run_VIPUR_tasks_SLURM( task_summaries , task_list , max_pbs_tries = 2 , ddg_
         
         # launch next jobs in available slots
         if available_space:
-            print str( queue_space_occupied ) + ' jobs queued, ' + str( available_space ) + ' open \"positions\"'
+            print str( queue_space_occupied ) + ' jobs queued or running, could submit up to ' + str( available_space ) + ' more'
             # choose the next job
             jobs_to_run = [i for i in task_list if
                 not i in completed and
@@ -263,7 +263,7 @@ def run_VIPUR_tasks_SLURM( task_summaries , task_list , max_pbs_tries = 2 , ddg_
                     ('success' in task_summaries[i[0]]['commands'][i[1]]['run'] or
                     'failure' in task_summaries[i[0]]['commands'][i[1]]['run']) )
                 ]
-            print str( len( jobs_to_run ) ) + ' jobs left to run...'
+            print str( len( jobs_to_run ) ) + ' jobs still need to finish (after the currently running jobs complete)'
             
             # only the next few
             for i in jobs_to_run[:available_space]:
