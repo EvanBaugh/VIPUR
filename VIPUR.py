@@ -354,6 +354,7 @@ import optparse
 # custom modules
 from run_methods import run_VIPUR_serially #, run_VIPUR_deprecated , run_VIPUR_parallel , run_VIPUR_in_stages
 from pbs_run_methods import run_VIPUR_PBS
+from slurm_run_methods import run_VIPUR_SLURM
 
 ################################################################################
 # MAIN
@@ -441,7 +442,11 @@ if __name__ == '__main__':
             out_path = out_path , write_numbering_map = write_numbering_map ,
             single_relax = True , delete_intermediate_relax_files = True ,
             demo = demo )
-#    elif run_mode.lower() == 'slurm':
+    elif run_mode.lower() == 'slurm':
+        run_VIPUR_SLURM( pdb_filename = pdb_filename , variants_filename = variants_filename ,
+            out_path = out_path , write_numbering_map = write_numbering_map ,
+            single_relax = True , delete_intermediate_relax_files = True ,
+            demo = demo )
 
 #    quit()    # why is this here?
 

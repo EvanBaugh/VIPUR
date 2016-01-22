@@ -129,7 +129,9 @@ def run_VIPUR_SLURM( pdb_filename = '' , variants_filename = '' ,
         # modify for SLURM script
         task_summary = load_task_summary( task_summary_filename )
         
-        task_summary['filenames']['slurm_script_filename'] = 'slurm_' + get_root_filename( i[0] ) + '.sh'
+#        task_summary['filenames']['slurm_script_filename'] = 'slurm_' + get_root_filename( i[0] ) + '.sh'
+        task_summary['filenames']['slurm_script_filename'] = 'slurm_script_this_batch.sh'
+        # ...awkward...they all have individual task summarization of the same script...
         
         for j in xrange( len( task_summary['commands'] ) ):
 #            slurm_options = {}
@@ -252,7 +254,7 @@ def run_VIPUR_task_summaries_SLURM( task_summaries , single_relax = False , dele
 #    for i in xrange( len( task_summaries ) ):
         # tasks will check if the task summaries indicates they have already be run
 #        task_summaries[i] = run_task_commands_serially( task_summaries[i] , single_relax = single_relax , delete_intermediate_relax_files = delete_intermediate_relax_files )
-.
+
 
 ################################################################################
 # three obvious ways to proceed for me
@@ -285,9 +287,12 @@ def run_VIPUR_tasks_in_batch_SLURM( task_summaries , task_list , max_slurm_tries
         print str( len( jobs_to_run ) ) + ' processes still need to finish'
     
         # write the script
-        master_script_text = '\n\n'.join( [task_summaries[i[0]]['commands'][i[1]] for i in jobs_to_run] )
+        master_script_text = '\n\n'.join( [task_summaries[i[0]]['commands'][i[1]]['command'] for i in jobs_to_run] )
         master_script_text = SLURM_BASH_SCRIPT( master_script_text )
-        slurm_script_filename = task_summaries['filenames']['slurm_script_filename']
+        
+        # check if they have different names!?...wait...they will...
+        slurm_script_filename = task_summaries[0]['filenames']['slurm_script_filename']
+        # can just use the first one now...
 
         f = open( slurm_script_filename , 'w' )
         f.write( master_script_text )
