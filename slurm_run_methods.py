@@ -128,26 +128,35 @@ def run_VIPUR_SLURM( pdb_filename = '' , variants_filename = '' ,
 
         # modify for SLURM script
         task_summary = load_task_summary( task_summary_filename )
+        
+        task_summary['filenames']['slurm_script_filename'] = 'slurm_' + get_root_filename( i[0] ) + '.sh'
+        
         for j in xrange( len( task_summary['commands'] ) ):
-            slurm_options = {}
+#            slurm_options = {}
 
             command = task_summary['commands'][j]['command']
 
             # add for relax
-#            if task_summary['commands'][j]['feature'].replace( '_native' , '' ) == 'relax' and not 'rescore' in task_summary['commands'][j]['feature']:
-#                command = command.replace( '.linuxgccrelease' , '.mpi.linuxgccrelease' )
+            if task_summary['commands'][j]['feature'].replace( '_native' , '' ) == 'relax' and not 'rescore' in task_summary['commands'][j]['feature']:
+                command = command.replace( '.linuxgccrelease' , '.mpi.linuxgccrelease' )
 #                command = 'module load mvapich2/gnu/1.8.1;/share/apps/mvapich2/1.8.1/gnu/bin/mpiexec -n 36 ' + command
-#                command += ' -jd2:mpi_file_buf_job_distributor false'
-#                command += ' -run:multiple_processes_writing_to_one_directory'
+                command = 'mpiexec -n 40 ' + command
+                command += ' -jd2:mpi_file_buf_job_distributor false'
+                command += ' -run:multiple_processes_writing_to_one_directory'
                 
                 # also use the parallel options
 #                pbs_options.update( PBS_PARALLEL_JOB_OPTIONS )
 #            else:
-            pbs_options.update( SLURM_SERIAL_JOB_OPTIONS )
+
+#            slurm_options.update( SLURM_SERIAL_JOB_OPTIONS )
 
             # put "cd" in front
 #            command = ('#!/bin/bash\n\ncd '+ i[3] +'\n\n')*bool( i[3] ) + command +'\n\n'
-            command = ('cd '+ i[3] +';')*bool( i[3] ) + command
+#            command = ('cd '+ i[3] +';')*bool( i[3] ) + command    # not needed for slurm, use abspaths and one big batch
+
+            # special...
+            if task_summary['commands'][j]['feature'] == 'psiblast' and not 'num_threads' in task_summary['commands'][j]['command']:
+                task_summary['commands'][j]['command'] += ' -num_threads 40'
             
             # modify the task summary
             task_summary['commands'][j]['command'] = command
@@ -155,22 +164,23 @@ def run_VIPUR_SLURM( pdb_filename = '' , variants_filename = '' ,
             
             # actually write the script...
             # don't worry about optional #PBS header info
-            script_filename = i[3] + '/'*bool( i[3] ) + get_root_filename( i[0] ).split( '/' )[-1] +'.'+ task_summary['commands'][j]['feature'] + '.slurm_script.sh'
-            task_summary['commands'][j]['script_filename'] = script_filename
-            
-            f = open( script_filename , 'w' )
-            f.write( SLURM_BASH_SCRIPT( command ) )
-            f.close()
+#            script_filename = i[3] + '/'*bool( i[3] ) + get_root_filename( i[0] ).split( '/' )[-1] +'.'+ task_summary['commands'][j]['feature'] + '.slurm_script.sh'
+#            task_summary['commands'][j]['script_filename'] = script_filename
+
+            # only write ONE submission script per batch = run of VIPUR           
+#            f = open( script_filename , 'w' )
+#            f.write( SLURM_BASH_SCRIPT( command ) )
+#            f.close()
             
             # use the script filename as the source for any log files
             # control the output and error paths
-            for k in slurm_options.keys():
-                if '__call__' in dir( slurm_options[k] ):
-                    slurm_options[k] = slurm_options[k]( script_filename )
+#            for k in slurm_options.keys():
+#                if '__call__' in dir( slurm_options[k] ):
+#                    slurm_options[k] = slurm_options[k]( script_filename )
 
             # also generate the pbs call? might as well, keep it simple...
             # srun or sbatch?
-            task_summary['commands'][j]['srun_command'] = create_executable_str( 'srun' , [script_filename] , slurm_options )
+#            task_summary['commands'][j]['srun_command'] = create_executable_str( 'srun' , [script_filename] , slurm_options )
 
         # rewrite the task summary
         write_task_summary( task_summary , task_summary_filename )
@@ -194,8 +204,9 @@ def run_VIPUR_SLURM( pdb_filename = '' , variants_filename = '' ,
 
 # different from serial method
 # collect up all jobs at once, fire off serially (lol) to queue
+# NOPE collect up all jobs at once - WRITE ONE SUBMISSION SCRIPT, and fire off this single job...I guess give progressive updates on status...?
 # need to be cognizant of queue status, rescore must occur later
-def run_VIPUR_task_summaries_SLURM( task_summaries , single_relax = False , delete_intermediate_relax_files = True ):
+def run_VIPUR_task_summaries_SLURM( task_summaries , single_relax = False , delete_intermediate_relax_files = True , unsupported_many_jobs_version = False ):
     # queue command can be derived from task itself
     # this method will run...until all jobs are complete
     
@@ -212,10 +223,28 @@ def run_VIPUR_task_summaries_SLURM( task_summaries , single_relax = False , dele
     non_rescore_tasks = [i for i in non_rescore_tasks if not i in rescore_tasks]
 
 
-    run_VIPUR_tasks_SLURM( task_summaries , non_rescore_tasks )
+    # actually...just give a whole different setup here
     
-    # run the rescore tasks
-    run_VIPUR_tasks_SLURM( task_summaries , rescore_tasks )
+    if unsupported_many_jobs_version:
+        run_VIPUR_tasks_SLURM( task_summaries , non_rescore_tasks )
+    
+        # should just be give dependency on the matching relax jobs
+        # --dependency=afterok:<relax_script_filename.sh>
+        # run the rescore tasks
+        run_VIPUR_tasks_SLURM( task_summaries , rescore_tasks )
+    else:
+        # the only supported usage
+        # gather up all the jobs, create a single batch script
+        # could make separately, and submit a collective script to submit these...
+        # but for now, going to just run crudely combined with a single sbatch
+        # ...how to collect for salloc? still a mystery to me...
+        
+        # gather the commands
+#        run_VIPUR_tasks_in_batch_SLURM( task_summaries , non_rescore_tasks , rescore_tasks )
+        # ...until its working, still just do them in series
+        run_VIPUR_tasks_in_batch_SLURM( task_summaries , non_rescore_tasks )
+
+        run_VIPUR_tasks_in_batch_SLURM( task_summaries , rescore_tasks )
     
     # return anything?
     # task summaries should be updated with all the necessary files...
@@ -223,7 +252,145 @@ def run_VIPUR_task_summaries_SLURM( task_summaries , single_relax = False , dele
 #    for i in xrange( len( task_summaries ) ):
         # tasks will check if the task summaries indicates they have already be run
 #        task_summaries[i] = run_task_commands_serially( task_summaries[i] , single_relax = single_relax , delete_intermediate_relax_files = delete_intermediate_relax_files )
+.
 
+################################################################################
+# three obvious ways to proceed for me
+# one big sbatch script, submitted requesting many resources
+
+# one big sbatch script - but run with the "parSlurm" approach, requires non-multithreading and no mpi
+
+# many small jobs run separately with sbatch
+
+################################################################################
+# ONE BIG SBATCH SCRIPT
+
+def run_VIPUR_tasks_in_batch_SLURM( task_summaries , task_list , max_slurm_tries = 2 ):
+    # also setup to do start-stop
+    completed = [i for i in task_list if 'run' in task_summaries[i[0]]['commands'][i[1]] and 'success' in task_summaries[i[0]]['commands'][i[1]]['run']]
+
+    while not len( completed ) == task_list:
+        # do not worry about the queue in this mode
+        # assume you will be able to submit etc.
+        # not such thing as "running or queued" either, just run one batch at a time
+    
+        # gather all the commands into a single script
+        # choose the next job
+        jobs_to_run = [i for i in task_list if
+            not i in completed and
+            not ( 'run' in task_summaries[i[0]]['commands'][i[1]] and
+                ('success' in task_summaries[i[0]]['commands'][i[1]]['run'] or
+                'failure' in task_summaries[i[0]]['commands'][i[1]]['run']) )
+            ]
+        print str( len( jobs_to_run ) ) + ' processes still need to finish'
+    
+        # write the script
+        master_script_text = '\n\n'.join( [task_summaries[i[0]]['commands'][i[1]] for i in jobs_to_run] )
+        master_script_text = SLURM_BASH_SCRIPT( master_script_text )
+        slurm_script_filename = task_summaries['filenames']['slurm_script_filename']
+
+        f = open( slurm_script_filename , 'w' )
+        f.write( master_script_text )
+        f.close()
+        
+        # save a copy of this script for reference?
+        # successive runs with overwrite the file...
+        
+        # debug
+        raw_input( 'everything okay?' )
+    
+        # submit sbatch
+        # simple for now...
+        batch_job_id = run_local_commandline( 'sbatch -n40 ' + slurm_script_filename , collect_stdout = True )
+        # srun or sbatch?
+        batch_job_id = batch_job_id.split( ' ' )[-1]
+        print 'submitted ' + batch_job_id
+        
+        
+        # monitor the job until it is complete
+
+        # pause...
+        batch_complete = False
+        while not batch_complete:
+            queue_status = get_slurm_queue_status()
+            batch_complete = bool( [i for i in queue_status if i[0] == batch_job_id] )
+        
+            print 'waiting ' + str( SLURM_QUEUE_MONITOR_DELAY ) +'s...'
+            time.sleep( SLURM_QUEUE_MONITOR_DELAY )
+
+
+        # evaluate if it ran successfully
+        for job_pair in jobs_to_run:
+            command_dict = task_summaries[job_pair[0]]['commands'][job_pair[1]]
+
+            check_successful = determine_check_successful_function( command_dict , single_relax = single_relax )
+
+            success = check_successful( command_dict )
+
+            failure_summary = ''
+            if isinstance( success , bool ):
+                complete = success
+            elif len( success ) > 1 and isinstance( success[0] , bool ):
+                complete = success[0]
+                failure_summary += ' '+ ';'.join( [str( j ) for j in success[1:]] ) +' '
+ 
+            # track the number of attempts?
+            # try until failure - how many times?
+            tries = 0
+            if 'run' in command_dict.keys() and command_dict['run'] and not 'success' in command_dict['run'] and not 'failure' in command_dict['run']:
+                tries = int( command_dict['run'] )
+            tries += 1
+                
+            if tries >= max_slurm_tries:
+                # its a failure
+                print str( job_pair ) + ' completed successfully'*complete + (' failed with ' + str( tries ) + ' attempts')*(not complete)
+                failure_summary = 'success'*complete + (str( tries ) +' tries;failure ' + failure_summary)*(not complete)
+                completed.append( job_pair )
+            else:
+                # record the number of tries
+                print str( job_pair ) + ' completed' + ' successfully'*complete
+                failure_summary = str( tries )
+                completed.append( job_pair )
+                
+            # update the record
+            task_summaries[job_pair[0]]['commands'][job_pair[1]]['run'] = failure_summary
+            
+            # optionally cleanup
+            if ddg_monomer_cleanup and command_dict['feature'] == 'ddg_monomer':#'ddg' in i['output_filename']:
+                print 'ddg_monomer writes useless output files, deleting these now...'
+                remove_intermediate_ddg_monomer_files()
+
+        # update task_summaries e.g. write them!
+        # modified: so the task summary records its own name...bah!
+        for i in task_summaries:
+            if not 'task_summary_filename' in i['filenames'].keys():
+                raise NotImplementedError( 'should input the task summary filename (not the summary itself)...' )
+            else:
+                # write it out
+                print 'updating: ' + i['filenames']['task_summary_filename']
+                write_task_summary( i , i['filenames']['task_summary_filename'] )
+
+
+    # rerun as necessary
+    
+    # cleanup at the end
+    # need to merge relax output...?
+
+
+    # should be outside the outermost loop...which is unclear right now...        
+    # write one last time?
+#    for i in task_summaries:
+#        if not 'task_summary_filename' in i['filenames'].keys():
+#            raise NotImplementedError( 'should input the task summary filename (not the summary itself)...' )
+#        else:
+            # write it out
+#            write_task_summary( i , i['filenames']['task_summary_filename'] )
+
+
+################################################################################
+# SUBMIT MANY INDIVIDUAL JOBS
+
+# ex. need to distinguish serial vs parallel queues etc.
 
 # submit jobs until complete or too many attempts
 def run_VIPUR_tasks_SLURM( task_summaries , task_list , max_pbs_tries = 2 , ddg_monomer_cleanup = True , single_relax = False , delete_intermediate_relax_files = False ):
@@ -428,7 +595,11 @@ def get_slurm_queue_status( user = SLURM_USER , header_lines = 1 , trailer_lines
     queue_info = run_local_commandline( command , collect_stdout = True )
 
     # simple parsing
-    queue_info = queue_info.split( '\n' )[header_lines:-1*trailer_lines]
+    queue_info = queue_info.split( '\n' )
+    if trailer_lines:
+        queue_info = queue_info[header_lines:-1*trailer_lines]
+    elif header_lines:
+        queue_info = queue_info[header_lines:]
     queue_info = [[j for j in i.split( ' ' ) if j.strip()] for i in queue_info]
 
     # optionally only report the job statuses
@@ -442,6 +613,25 @@ def get_slurm_queue_status( user = SLURM_USER , header_lines = 1 , trailer_lines
 
 # primarily concerned with job status only
 # need 1st and 2nd to last columns
+
+# simple wrapper for running
+# grab the output job ID
+def run_slurm_job( script_filename , slurm_run_command = 'sbatch' , output_filename = 'temp_slurm.sh' ):    
+    # optionally write a file
+    if not os.path.isfile( script_filename ) and isinstance( script_filename , str ):
+#        if os.path.isfile( output_filename ):    # should really check if it exists first...
+        f = open( output_filename , 'w' )
+        f.write( script_filename )
+        f.close()
+        
+        script_filename = output_filename
+    
+    # submit it, grab the name :)
+#    job_id = run_and_record( slurm_run_command +' '+ script_filename , )
+    job_id = run_local_commandline( slurm_run_command +' '+ script_filename , collect_stdout = True )
+    job_id = job_id[0].split( ' ' )[-1]
+    
+    return job_id
 
 ################################################################################
 # MAIN

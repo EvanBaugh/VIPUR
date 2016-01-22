@@ -115,7 +115,7 @@ AMINOCHANGE_GROUPS = [
 PSIBLAST_OPTIONS = {
     'db' : PATH_TO_BLAST_DATABASE ,
 
-#    'num_threads' : 40 ,    # messes up my PBS submission
+    'num_threads' : 40 ,    # messes up my PBS submission, works with SLURM for speedup
     'num_iterations' : 2 ,
     'pseudocount' : 2 ,
 
@@ -230,12 +230,12 @@ PBS_PARALLEL_JOB_OPTIONS = {
 
 SLURM_USER = 'ebaugh'
 
-SLURM_QUEUE_QUOTA = 10
+#SLURM_QUEUE_QUOTA = 10
 SLURM_QUEUE_MONITOR_DELAY = 60    # less then this?
 
 SLURM_BASH_SCRIPT = lambda x : '#!/bin/bash\n\n' + x.replace( ';' , '\n\n' ) +'\n\n'
 
-SLURM_SERIAL_JOB_OPTIONS = {
+SLURM_JOB_OPTIONS = {
 #    'n' : ,    # how many to request? is it actually threaded? just do 1 for now, later we can combine multiple for arrays or array like implementation
     # lol, these two are the same
     'o' : lambda x : x.replace( '.sh' , '.log.out' ) ,
