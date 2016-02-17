@@ -172,6 +172,7 @@ ROSETTA_RELAX_OPTIONS = {
 #    'in:file:native' : lambda x : x + '.pdb' ,
 #    'bGDT' : 'true' ,
     'run:ignore_zero_occupancy' : 'false' ,
+
 #    'jd2:mpi_file_buf_job_distributor' : 'false' ,
 #    'run:multiple_processes_writing_to_one_directory' : '' ,
 
@@ -183,7 +184,14 @@ ROSETTA_RELAX_OPTIONS = {
     
 #    'parallel' : 40 ,    # a Rosetta option?
     }
+
+# used anymore?
 ROSETTA_RELAX_PARALLEL = 40#False    # OPTIONS should be reserved for explicit options to Rosetta
+
+ROSETTA_RELAX_PARALLEL_OPTIONS = {
+    'jd2:mpi_file_buf_job_distributor' : 'false' ,
+    'run:multiple_processes_writing_to_one_directory' : '' ,
+    }
 
 ROSETTA_SCORE_OPTIONS = {
     'database' : PATH_TO_ROSETTA_DATABASE ,
@@ -207,7 +215,10 @@ PBS_QUEUE_QUOTA = 20    # how many jobs can be in the queue simultaneously (excl
 PBS_QUEUE_MONITOR_DELAY = 60    # seconds, how long to wait between checking the queue
 
 # simply add the flanking text necessary
-PBS_BASH_SCRIPT = lambda x : '#!/bin/bash\n\n' + x.replace( ';' , '\n\n' ) +'\n\n'
+#PBS_BASH_SCRIPT_TEXT = '#!/bin/bash\n\n'
+PBS_BASH_SCRIPT_TEXT = '#!/bin/bash\n\nmodule load blast+/2.2.28\nmodule load rosetta/openmpi/intel/54167\n\n'
+#PBS_BASH_SCRIPT = lambda x : '#!/bin/bash\n\n' + x.replace( ';' , '\n\n' ) +'\n\n'
+PBS_BASH_SCRIPT = lambda x : PBS_BASH_SCRIPT_TEXT + x.replace( ';' , '\n\n' ) +'\n\n'
 
 
 PBS_SERIAL_JOB_OPTIONS = {
@@ -218,19 +229,27 @@ PBS_SERIAL_JOB_OPTIONS = {
 #    'V' : '' ,    # necessary? seems to be case specific for me...
     }
 
+PBS_PARALLEL_NODE_ALLOCATION = 3
+PBS_PARALLEL_PROCESSES_ALLOCATION = 12
+
 PBS_PARALLEL_JOB_OPTIONS = {
-    'q' : 'p24' ,
-    'l' : 'nodes=3:ppn=12,mem=46gb,walltime=4:00:00' ,
+    'q' : 'p12' ,#24' ,
+    'l' : 'nodes=' + str( PBS_PARALLEL_NODE_ALLOCATION ) + ':ppn=' + str( PBS_PARALLEL_PROCESSES_ALLOCATION ) + ',mem=46gb,walltime=4:00:00' ,
     'o' : lambda x : x.replace( '.sh' , '.log.out' ) ,
     'e' : lambda x : x.replace( '.sh' , '.log.err' ) ,
     }
+
+ROSETTA_ENDING = '.linuxiccrelease'    # gccrelease on butinah
+PBS_PARALLEL_ROSETTA_ENDING = '.mpi.linuxiccrelease'    # gccrelease on butinah
+
+PBS_PARALLEL_ROSETTA_EXECUTION_COMMAND = '' #module load mvapich2/gnu/1.8.1;/share/apps/mvapich2/1.8.1/gnu/bin/mpiexec -n ' + str( PBS_PARALLEL_NODE_ALLOCATION*PBS_PARALLEL_PROCESSES_ALLOCATION )
 
 ################################################################################
 # SLURM QUEUE SYSTEM INTERACTION
 
 SLURM_USER = 'ebaugh'
 
-#SLURM_QUEUE_QUOTA = 10
+SLURM_QUEUE_QUOTA = 10    # deprecated?
 SLURM_QUEUE_MONITOR_DELAY = 60    # less then this?
 
 SLURM_BASH_SCRIPT = lambda x : '#!/bin/bash\n\n' + x.replace( ';' , '\n\n' ) +'\n\n'
@@ -665,4 +684,5 @@ PREDICTION_OUTPUT_HEADER = [
     'interpretation' ,
     'top ' + str( TOP_FEATURES_TO_INCLUDE ) + ' ranked features'
     ]
+
 

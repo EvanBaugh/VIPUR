@@ -61,7 +61,7 @@ def run_serially_until_complete( command_dict , run_command , check_successful ,
     return complete , tries , failure_summary
 
 
-# simples task manager, just fire off sequentially + locally
+# simple task manager, just fire off sequentially + locally
 def run_task_commands_serially( task_summary_filename ,
         ddg_monomer_cleanup = True , max_tries = 2 ,
         single_relax = False , delete_intermediate_relax_files = False ):
@@ -411,6 +411,8 @@ def run_VIPUR_in_stages( pdb_filename , variants_filename , prediction_filename 
 
 ################################################################################
 # COMPLETE METHODS
+
+# DEPRECATED
 
 # integrate preprocessing, running, and postprocessing...
 # single method

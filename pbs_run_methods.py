@@ -15,7 +15,7 @@ import time
 # bigger modules
 
 # custom modules
-from vipur_settings import PBS_USER , PBS_ENVIRONMENT_SETUP , PBS_QUEUE_QUOTA , PBS_QUEUE_MONITOR_DELAY , PBS_SERIAL_JOB_OPTIONS , PBS_PARALLEL_JOB_OPTIONS , PBS_BASH_SCRIPT
+from vipur_settings import PBS_USER , PBS_ENVIRONMENT_SETUP , PBS_QUEUE_QUOTA , PBS_QUEUE_MONITOR_DELAY , PBS_SERIAL_JOB_OPTIONS , PBS_PARALLEL_JOB_OPTIONS , PBS_BASH_SCRIPT , ROSETTA_ENDING , PBS_PARALLEL_ROSETTA_ENDING , PBS_PARALLEL_ROSETTA_EXECUTION_COMMAND , ROSETTA_RELAX_PARALLEL_OPTIONS
 from helper_methods import run_local_commandline , create_executable_str
 
 from pre_processing import *
@@ -132,11 +132,14 @@ def run_VIPUR_PBS( pdb_filename = '' , variants_filename = '' ,
 
             # add for relax
             if task_summary['commands'][j]['feature'].replace( '_native' , '' ) == 'relax' and not 'rescore' in task_summary['commands'][j]['feature']:
-                if not '.mpi.linuxgccrelease' in command:
-                    command = command.replace( '.linuxgccrelease' , '.mpi.linuxgccrelease' )
-                command = 'module load mvapich2/gnu/1.8.1;/share/apps/mvapich2/1.8.1/gnu/bin/mpiexec -n 36 ' + command
-                command += ' -jd2:mpi_file_buf_job_distributor false'
-                command += ' -run:multiple_processes_writing_to_one_directory'
+                if not PBS_PARALLEL_ROSETTA_ENDING in command:
+                    command = command.replace( ROSETTA_ENDING , PBS_PARALLEL_ROSETTA_ENDING )
+                command = PBS_PARALLEL_ROSETTA_EXECUTION_COMMAND + ' '*bool( PBS_PARALLEL_ROSETTA_EXECUTION_COMMAND ) + command
+
+                if ROSETTA_RELAX_PARALLEL_OPTIONS:
+                    command += ' '+ ' '.join( ['-'+ k + (' '+ ROSETTA_RELAX_PARALLEL_OPTIONS[k])*bool( ROSETTA_RELAX_PARALLEL_OPTIONS[k] ) for k in ROSETTA_RELAX_PARALLEL_OPTIONS] )
+#                command += ' -jd2:mpi_file_buf_job_distributor false'
+#                command += ' -run:multiple_processes_writing_to_one_directory'
                 
                 # also use the parallel options
                 pbs_options = 'parallel'#.update( PBS_PARALLEL_JOB_OPTIONS )
@@ -162,6 +165,8 @@ def run_VIPUR_PBS( pdb_filename = '' , variants_filename = '' ,
 #            print script_filename    # debug
 #            raw_input( 'continue?' )    # debug
 
+#            print '$$' , command
+#            print '$$' , PBS_BAST_SCRIPT( command )
             f = open( script_filename , 'w' )
             f.write( PBS_BASH_SCRIPT( command ) )
             f.close()
@@ -340,7 +345,9 @@ def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_mo
 
                 pbs_command = create_executable_str( 'qsub' , [script_filename] , pbs_options )
                 new_job_id = run_local_commandline( pbs_command , collect_stdout = True )
-                new_job_id = new_job_id[:new_job_id.find( '.' )]
+                new_job_id = new_job_id.strip()
+                if '.' in new_job_id:
+                    new_job_id = new_job_id[:new_job_id.find( '.' )]
                 print 'submitted ' + new_job_id
  #               print 'it was ' , task_summaries[i[0]].keys()    # debug
                 
@@ -475,7 +482,7 @@ def get_pbs_queue_status( user = PBS_USER , header_lines = 5 , trailer_lines = 1
 
     # optionally only report the job statuses
     if only_job_status:
-        queue_info = [(i[0][:i[0].find( '.' )] , i[-2]) for i in queue_info]
+        queue_info = [(i[0][:i[0].find( '.' )] , i[-2])  if '.' in i[0] else  (i[0] , i[-2]) for i in queue_info]
         # make into a dict? job ids should be unique...
         queue_info = dict( queue_info )
 
@@ -483,11 +490,5 @@ def get_pbs_queue_status( user = PBS_USER , header_lines = 5 , trailer_lines = 1
 
 # primarily concerned with job status only
 # need 1st and 2nd to last columns
-
-################################################################################
-# MAIN
-
-if __name__ == '__main__':
-    None
 
 

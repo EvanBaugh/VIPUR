@@ -244,10 +244,11 @@ class VIPURClassifier():
     
         # add in surface etc.? separate analysis
         # just use ACCP 12.5 as the cutoff
+        # is this direction correct!? high ACCP
         exposure = 'surface'
-        if isinstance( input_vector , list ) and len( input_vector ) > 5 and input_vector[5] > PROBE_ACCP_INTERIOR_CUTOFF:    # I LOATHE THIS! magic number AND hardcoded index!!!
+        if isinstance( input_vector , list ) and len( input_vector ) > 5 and float( input_vector[5] ) < PROBE_ACCP_INTERIOR_CUTOFF:    # I LOATHE THIS! magic number AND hardcoded index!!!
             exposure = 'interior'
-        elif isinstance( input_vector , dict ) and float( input_vector['probe_accp'] ) > PROBE_ACCP_INTERIOR_CUTOFF:
+        elif isinstance( input_vector , dict ) and float( input_vector['probe_accp'] ) < PROBE_ACCP_INTERIOR_CUTOFF:
             exposure = 'interior'
             
         combined_prediction['exposure'] = exposure

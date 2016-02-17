@@ -135,7 +135,7 @@ def run_VIPUR_SLURM( pdb_filename = '' , variants_filename = '' ,
         task_summary['filenames']['slurm_script_filename'] = out_path + '/slurm_script_this_batch.sh'
         task_summary['filenames']['slurm_output_filename'] = out_path + '/slurm_output_batch.out'
         task_summary['filenames']['slurm_error_filename'] = out_path + '/slurm_error_batch.err'
-        # ...awkward...they all have individual task summarization of the same script...
+        # ...awkward...they all have individual task summarization of the same script...but nowhere else to put it...
         
         for j in xrange( len( task_summary['commands'] ) ):
             slurm_options = {}
@@ -397,6 +397,8 @@ def run_VIPUR_tasks_in_batch_SLURM( task_summaries , task_list , max_slurm_tries
 #            print queue_status
 #            print queue_status.keys()
 #            print batch_complete , batch_job_id , batch_job_id in queue_status.keys()
+            for i in queue_status.keys():
+                print i + '\t' + queue_status[i]
 
             # can be sure it doesn't need to wait if empty
             if queue_status:
@@ -786,11 +788,5 @@ def run_slurm_job( script_filename , slurm_run_command = 'sbatch' , output_filen
     job_id = job_id[0].split( ' ' )[-1]
     
     return job_id
-
-################################################################################
-# MAIN
-
-if __name__ == '__main__':
-    None
 
 

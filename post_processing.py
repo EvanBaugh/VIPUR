@@ -224,6 +224,7 @@ def run_postprocessing( task_summary_filename , sequence_only = False ):
         
         # output append
         predictions[i] = '\t'.join( [str( j ) for j in [
+            i.split( '/' )[-1] ,    # added jan 2016
             i ,
             interpretation['label'] ,
             interpretation['P'] ,
