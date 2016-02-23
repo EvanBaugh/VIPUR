@@ -256,7 +256,7 @@ def run_postprocessing( task_summary_filename , sequence_only = False ):
     f = open( prediction_filename , 'w' )
     # very shameful, hardcoded indices again...
     temp = predictions.values()
-    temp = sorted( temp , key = lambda x : 1/(float( x.split( '\t' )[2] ) + 1e-7) )    # make sure no /0
+    temp = sorted( temp , key = lambda x : 1/(float( x.split( '\t' )[3] ) + 1e-7) )    # make sure no /0
     f.write( '\t'.join( PREDICTION_OUTPUT_HEADER ) +'\n'+ '\n'.join( temp ) )
     f.close()
 
