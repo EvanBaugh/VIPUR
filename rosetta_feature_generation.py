@@ -341,7 +341,7 @@ def run_rosetta_relax_local( pdb_filename , extra_options = {} , run = True ):
         return command , relax_options['out:file:silent']
 
 # simple, for now just check if empty or not
-def check_relax_output( relax_score_filename , target_number_of_trajectories = ROSETTA_RELAX_OPTIONS['nstruct'] , header_lines = 1 , single_relax = False ):
+def check_relax_output( relax_score_filename , target_number_of_trajectories = ROSETTA_RELAX_OPTIONS['nstruct'] , header_lines = 1 , single_relax = True ):
     # simple enough, for now just check if empty
     f = open( relax_score_filename , 'r' )
     trajectories = len( f.readlines() ) - header_lines

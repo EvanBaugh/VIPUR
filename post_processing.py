@@ -196,7 +196,7 @@ def run_postprocessing( task_summary_filename , sequence_only = False ):
     for i in task_summary['variants'].keys():
         if 'failed' in task_summary['variants'][i].keys():
             # add as a failure
-            predictions[i] = '\t'.join( [i , 'failed: ' + task_summary['variants'][i]['failed'] , str( 0 )] )
+            predictions[i] = '\t'.join( [i.split( '/' )[-1] , i , 'failed: ' + task_summary['variants'][i]['failed'] , str( 0 )] )    # added feb 2016 to match below
             continue
 
         print 'Variant: ' + i.split( '/' )[-1]

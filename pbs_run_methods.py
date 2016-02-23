@@ -207,7 +207,7 @@ def run_VIPUR_PBS( pdb_filename = '' , variants_filename = '' ,
 # different from serial method
 # collect up all jobs at once, fire off serially (lol) to queue
 # need to be cognizant of queue status, rescore must occur later
-def run_VIPUR_task_summaries_PBS( task_summaries , single_relax = False , delete_intermediate_relax_files = True ):
+def run_VIPUR_task_summaries_PBS( task_summaries , single_relax = True , delete_intermediate_relax_files = True ):
     # queue command can be derived from task itself
     # this method will run...until all jobs are complete
     
@@ -239,7 +239,7 @@ def run_VIPUR_task_summaries_PBS( task_summaries , single_relax = False , delete
 
 
 # submit jobs until complete or too many attempts
-def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_monomer_cleanup = True , single_relax = False , delete_intermediate_relax_files = False ):
+def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_monomer_cleanup = True , single_relax = True , delete_intermediate_relax_files = False ):
     # run the non_rescore tasks
     completed = [i for i in task_list if 'run' in task_summaries[i[0]]['commands'][i[1]] and 'success' in task_summaries[i[0]]['commands'][i[1]]['run']]
     # should running_or_queued be saved? written to file?
@@ -388,8 +388,8 @@ def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_mo
                 elif len( success ) > 1 and isinstance( success[0] , bool ):
                     complete = success[0]
                     failure_summary += ' '+ ';'.join( [str( j ) for j in success[1:]] ) +' '
-                    print complete , failure_summary , 'try again?'    # debug
- 
+                    print complete , failure_summary , 'try again?'*bool( not complete )    # debug
+
                 # track the number of attempts?
                 # try until failure - how many times?
                 tries = 0
