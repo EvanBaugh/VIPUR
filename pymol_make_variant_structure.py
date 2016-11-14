@@ -2,8 +2,6 @@
 # :noTabs=true:
 
 """
-ehb: 12/3
-
 PyMOL script that creates protein structures from the list of variations
 
 INPUT:

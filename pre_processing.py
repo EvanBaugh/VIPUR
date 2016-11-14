@@ -2,7 +2,10 @@
 # :noTabs=true:
 
 """
-main preprocessing
+"pre processing" assess which variants need to be run, generate input files, and otherwise setup to run
+
+generates a summary of what needs to be run, a "task summary"
+this allows VIPUR to start and stop while tracking what has been run
 """
 
 ################################################################################
@@ -45,17 +48,12 @@ def run_preprocessing( pdb_filename , variants_filename , prediction_filename = 
     root_filename = get_root_filename( pdb_filename )
     base_root_filename = root_filename.split( '/' )[-1]
     
-#    print root_filename
-#    raw_input( 'pause' )
-
     if not task_summary_filename:
         task_summary_filename = root_filename + '.task_summary'
 
     # where to store output?
     if out_path:
         if not os.path.isdir( out_path ):
-#            print out_path
-#            print os.getcwd()
             create_directory( out_path )
 
         # make copies of the input files
@@ -106,8 +104,6 @@ def run_preprocessing( pdb_filename , variants_filename , prediction_filename = 
         else:
             numbering_map_filename = root_filename + '.numbering_map'
 
-#        print numbering_map_filename
-#        raw_input( 'moo' )
         f = open( numbering_map_filename , 'w' )
         keys = sorted( residue_map.keys() , key = lambda x : int( x ) )
         f.write( '\n'.join( ['\t'.join( [i , str( residue_map[i] + 1 ) , sequence[residue_map[i]]] ) for i in keys] ) )
@@ -117,7 +113,6 @@ def run_preprocessing( pdb_filename , variants_filename , prediction_filename = 
         sys.stdout.flush()
     else:    # the normal protocol
         if not target_chain:    # also support int for index?
-#            print pdb_filename
             target_chain = extract_chains_from_pdb( pdb_filename )
             target_chain = target_chain[0]    # always a list
 

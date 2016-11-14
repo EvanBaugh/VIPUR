@@ -11,31 +11,35 @@ When setting up VIPUR, make sure you provide all the paths needed
 ################################################################################
 # PATHS
 
-PATH_TO_VIPUR = '/home/evan/VIPUR_pipeline/VIPUR'    # remember, this should be blank each push
-#PATH_TO_VIPUR = '/scratch/ehb250/VIPUR_pipeline/VIPUR'    # remember, this should be blank each push
 PATH_TO_VIPUR_EXECUTABLES = '/home/evan/VIPUR_pipeline/VIPUR_feature_executables' #/VIPUR_feature_executables'
-
+PATH_TO_VIPUR = '/home/evan/VIPUR_pipeline/VIPUR'    # remember, this should be blank each push
 PATH_TO_PSIBLAST = PATH_TO_VIPUR_EXECUTABLES + '/psiblast_blast+2.2.25'
-#PATH_TO_PSIBLAST = '/home/ehb250/MEC_files/ncbi-blast-2.2.25+/bin/psiblast'#PATH_TO_VIPUR_EXECUTABLES + '/psiblast_blast+2.2.25'
 PATH_TO_BLAST_DATABASE = '/home/evan/bio/databases/blast/nr/nr'
-#PATH_TO_BLAST_DATABASE = '/scratch/ehb250/nr_db/nr'#/home/evan/bio/databases/blast/nr/nr'
 PATH_TO_PROBE = PATH_TO_VIPUR_EXECUTABLES + '/probe'
-#PATH_TO_PROBE = '/home/ehb250/MEC_files/probe/probe'#PATH_TO_VIPUR_EXECUTABLES + '/probe'
 
 LICENSE = ''
 
 PATH_TO_ROSETTA_DATABASE = PATH_TO_VIPUR_EXECUTABLES + '/rosetta_database'
-#PATH_TO_ROSETTA_DATABASE = '/scratch/ehb250/rosetta-3.4/rosetta_database'#PATH_TO_VIPUR_EXECUTABLES + '/rosetta_database'
 PATH_TO_ROSETTA_DDG_MONOMER = PATH_TO_VIPUR_EXECUTABLES + '/ddg_monomer_r54167.64bit.linuxgccrelease'
-#PATH_TO_ROSETTA_DDG_MONOMER = '/scratch/ehb250/rosetta-3.4/rosetta_source/bin/ddg_monomer.linuxgccrelease'#PATH_TO_VIPUR_EXECUTABLES + '/ddg_monomer_r54167.64bit.linuxgccrelease'
 PATH_TO_ROSETTA_RELAX = PATH_TO_VIPUR_EXECUTABLES + '/relax_r54167.64bit.linuxgccrelease'
-#PATH_TO_ROSETTA_RELAX = '/scratch/ehb250/rosetta-3.4/rosetta_source/bin/relax.mpi.linuxgccrelease'#PATH_TO_VIPUR_EXECUTABLES + '/relax_r54167.64bit.linuxgccrelease'
 PATH_TO_ROSETTA_SCORE = PATH_TO_VIPUR_EXECUTABLES + '/score_r54167.64bit.linuxgccrelease'
-#PATH_TO_ROSETTA_SCORE = '/scratch/ehb250/rosetta-3.4/rosetta_source/bin/score.linuxgccrelease'#PATH_TO_VIPUR_EXECUTABLES + '/score_r54167.64bit.linuxgccrelease'
 
 # alternate method for making variant structures, needs both paths
 PATH_TO_PYMOL = 'pymol'
+
+
+#PATH_TO_VIPUR = '/scratch/ehb250/VIPUR_pipeline/VIPUR'    # remember, this should be blank each push
+#PATH_TO_PSIBLAST = '/home/ehb250/MEC_files/ncbi-blast-2.2.25+/bin/psiblast'#PATH_TO_VIPUR_EXECUTABLES + '/psiblast_blast+2.2.25'
+#PATH_TO_BLAST_DATABASE = '/scratch/ehb250/nr_db/nr'#/home/evan/bio/databases/blast/nr/nr'
+#PATH_TO_PROBE = '/home/ehb250/MEC_files/probe/probe'#PATH_TO_VIPUR_EXECUTABLES + '/probe'
+
+#PATH_TO_ROSETTA_DATABASE = '/scratch/ehb250/rosetta-3.4/rosetta_database'#PATH_TO_VIPUR_EXECUTABLES + '/rosetta_database'
+#PATH_TO_ROSETTA_DDG_MONOMER = '/scratch/ehb250/rosetta-3.4/rosetta_source/bin/ddg_monomer.linuxgccrelease'#PATH_TO_VIPUR_EXECUTABLES + '/ddg_monomer_r54167.64bit.linuxgccrelease'
+#PATH_TO_ROSETTA_RELAX = '/scratch/ehb250/rosetta-3.4/rosetta_source/bin/relax.mpi.linuxgccrelease'#PATH_TO_VIPUR_EXECUTABLES + '/relax_r54167.64bit.linuxgccrelease'
+#PATH_TO_ROSETTA_SCORE = '/scratch/ehb250/rosetta-3.4/rosetta_source/bin/score.linuxgccrelease'#PATH_TO_VIPUR_EXECUTABLES + '/score_r54167.64bit.linuxgccrelease'
+
 #PATH_TO_PYMOL = '/share/apps/pymol/1.5.0.1/bin/pymol'
+
 
 # check for PyRosetta, used for making mutant structures
 USE_PYROSETTA = False
@@ -165,8 +169,7 @@ ROSETTA_DDG_MONOMER_OPTIONS = {
 ROSETTA_RELAX_OPTIONS = {
     'database' : PATH_TO_ROSETTA_DATABASE ,
 
-#    'nstruct' : 5 ,    # 50!
-    'nstruct' : 50 ,
+    'nstruct' : 50 ,    # try 5 for initial testing
     'relax:fast' : '' ,
     'evaluation:gdtmm' : 'true' ,
 #    'in:file:native' : lambda x : x + '.pdb' ,
@@ -215,9 +218,7 @@ PBS_QUEUE_QUOTA = 20    # how many jobs can be in the queue simultaneously (excl
 PBS_QUEUE_MONITOR_DELAY = 60    # seconds, how long to wait between checking the queue
 
 # simply add the flanking text necessary
-#PBS_BASH_SCRIPT_TEXT = '#!/bin/bash\n\n'
 PBS_BASH_SCRIPT_TEXT = '#!/bin/bash\n\nmodule load blast+/2.2.28\nmodule load rosetta/openmpi/intel/54167\n\n'
-#PBS_BASH_SCRIPT = lambda x : '#!/bin/bash\n\n' + x.replace( ';' , '\n\n' ) +'\n\n'
 PBS_BASH_SCRIPT = lambda x : PBS_BASH_SCRIPT_TEXT + x.replace( ';' , '\n\n' ) +'\n\n'
 
 
@@ -256,7 +257,6 @@ SLURM_BASH_SCRIPT = lambda x : '#!/bin/bash\n\n' + x.replace( ';' , '\n\n' ) +'\
 
 SLURM_JOB_OPTIONS = {
 #    'n' : ,    # how many to request? is it actually threaded? just do 1 for now, later we can combine multiple for arrays or array like implementation
-    # lol, these two are the same
     'o' : lambda x : x.replace( '.sh' , '.log.out' ) ,
     'e' : lambda x : x.replace( '.sh' , '.log.err' ) ,
     }
@@ -663,7 +663,7 @@ DELETERIOUS_PREDICTION_CRUDE_DESCRIPTION = {
         'quartile_refQ3' ,
         'ddg_p_aa_pp' ,
         'ddg_ref'
-        ]
+        ] ,
     }
 
 # header for the output predictions
@@ -682,7 +682,7 @@ PREDICTION_OUTPUT_HEADER = [
     'ddG prediction ~kcal/mol' ,
     
     'interpretation' ,
-    'top ' + str( TOP_FEATURES_TO_INCLUDE ) + ' ranked features'
+    'top ' + str( TOP_FEATURES_TO_INCLUDE ) + ' ranked features' ,
     ]
 
 

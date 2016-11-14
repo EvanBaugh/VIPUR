@@ -2,11 +2,7 @@
 # :noTabs=true:
 
 """
-ehb: 
-
-#
-
-Note: add documentation for release
+methods and wrappers for running Rosetta as part of VIPUR
 """
 
 ################################################################################
@@ -101,7 +97,6 @@ def create_variant_protein_structures( pdb_filename , variants , chain , use_pyr
         # create command explicitly here, slightly different
         root_filename = pdb_filename.rstrip( '.pdb' )
         command = PATH_TO_PYMOL + ' -qcr ' + PATH_TO_VIPUR + '/pymol_make_variant_structure.py -- -p ' + pdb_filename + ' -m ' + ','.join( variants ) + ' -c ' + chain + ' -r ' + root_filename
-#            print command
         if pymol_environment_setup:
             command = pymol_environment_setup +'\n\n'+ command
         run_local_commandline( command )
@@ -297,10 +292,6 @@ find . -name '%s_[0-9]*[0-9]' | xargs rm
 
     if run:
         run_local_commandline( command )
-    
-#    command = create_executable_str( PATH_TO_ROSETTA_RELAX , args = [] , options = relax_options )
-
-#    run_local_commandline( command )
     
     # the only output we need
 #    return relax_options['out:file:scorefile']

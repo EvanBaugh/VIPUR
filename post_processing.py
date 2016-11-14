@@ -2,7 +2,7 @@
 # :noTabs=true:
 
 """
-amusingly, when I built this as 3 sections, this was also in the pre_processing file
+"post processing" methods for extracting features and running classification
 """
 
 ################################################################################
@@ -145,9 +145,6 @@ def run_postprocessing( task_summary_filename , sequence_only = False ):
             mutation = i.split( '_' )[-1]
             new_key = mutation[0] + str( int( residue_map[mutation[1:-1]] ) + 1 ) + mutation[-1]
             for j in xrange( len( header ) ):
-#                print mutation
-#                print new_key
-#                print ddg_monomer_dict.keys()
                 task_summary['variants'][i]['features']['ddg_' + header[j]] = float( ddg_monomer_dict[new_key][j] )
                 # added "ddg_" for legacy compatability, is artibrary, make more informative
         

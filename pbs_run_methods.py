@@ -52,7 +52,6 @@ def run_VIPUR_PBS( pdb_filename = '' , variants_filename = '' ,
         # instead, run on the directory
         if not out_path:
             out_path = os.path.abspath( pdb_filename )
-#            print out_path
         
         fa_filenames = [(out_path +'/')*bool( out_path ) + i for i in os.listdir( pdb_filename ) if get_file_extension( i ) == 'fa']
         fa_filenames = [[i , get_root_filename( i ) + variants_filename] for i in fa_filenames if os.path.isfile( get_root_filename( i ) + variants_filename ) and not os.path.isfile( get_root_filename( i ) + '.pdb' )]
@@ -63,7 +62,6 @@ def run_VIPUR_PBS( pdb_filename = '' , variants_filename = '' ,
 
         # look for pairs
         pdb_filenames = [[i , get_root_filename( i ) + variants_filename] for i in pdb_filenames if os.path.isfile( get_root_filename( i ) + variants_filename )]
-#        print [i for i in pdb_filenames if os.path.isfile( pdb_filename +'/'+ get_root_filename( i ) + variants_filename )]
 
         print str( len( pdb_filenames ) ) + ' pairs found'
         print str( len( fa_filenames ) ) + ' pairs found for sequence only mode'
@@ -126,7 +124,6 @@ def run_VIPUR_PBS( pdb_filename = '' , variants_filename = '' ,
         # modify for PBS script
         task_summary = load_task_summary( task_summary_filename )
         for j in xrange( len( task_summary['commands'] ) ):
-#            pbs_options = {}
 
             command = task_summary['commands'][j]['command']
 
@@ -147,7 +144,6 @@ def run_VIPUR_PBS( pdb_filename = '' , variants_filename = '' ,
                 pbs_options = 'serial'#.update( PBS_SERIAL_JOB_OPTIONS )
 
             # put "cd" in front
-#            command = ('#!/bin/bash\n\ncd '+ i[3] +'\n\n')*bool( i[3] ) + command +'\n\n'
             command = ('cd '+ i[3] +';')*bool( i[3] ) + command
             
             # modify the task summary
@@ -156,29 +152,18 @@ def run_VIPUR_PBS( pdb_filename = '' , variants_filename = '' ,
             
             # actually write the script...
             # don't worry about optional #PBS header info
-#            print i    # debug
             # need to add the variant? no, just use the output_filename for this
             script_filename = i[3] + '/'*bool( i[3] ) + get_root_filename( task_summary['commands'][j]['output_filename'].split( '/' )[-1] ) +'.'+ task_summary['commands'][j]['feature'] + '.pbs_script.sh'
             task_summary['commands'][j]['script_filename'] = script_filename
-#            if 'variant' in task_summary['commands'][j].keys():
-#                print task_summary['commands'][j]['variant']
-#            print script_filename    # debug
-#            raw_input( 'continue?' )    # debug
 
-#            print '$$' , command
-#            print '$$' , PBS_BAST_SCRIPT( command )
             f = open( script_filename , 'w' )
             f.write( PBS_BASH_SCRIPT( command ) )
             f.close()
             
             # use the script filename as the source for any log files
             # control the output and error paths
-#            for k in pbs_options.keys():
-#                if '__call__' in dir( pbs_options[k] ):
-#                    pbs_options[k] = pbs_options[k]( script_filename )
 
-            # also generate the pbs call? might as well, keep it simple...
-#            task_summary['commands'][j]['qsub_command'] = create_executable_str( 'qsub' , [script_filename] , pbs_options )
+            # also generate the pbs call? might as well, keep it simple
             # no, uses ":" and "," characters...
             task_summary['commands'][j]['queue'] = pbs_options
 
@@ -189,7 +174,6 @@ def run_VIPUR_PBS( pdb_filename = '' , variants_filename = '' ,
 
 
     # run them all
-#    run_VIPUR_task_summaries_serially( task_summaries , single_relax = single_relax , delete_intermediate_relax_files = delete_intermediate_relax_files )
     run_VIPUR_task_summaries_PBS( task_summaries , single_relax = single_relax , delete_intermediate_relax_files = delete_intermediate_relax_files )
 
 
@@ -198,7 +182,6 @@ def run_VIPUR_PBS( pdb_filename = '' , variants_filename = '' ,
     for i in xrange( len( task_summaries ) ):
         # always okay to rerun post processing...should not make any difference
         sequence_only = target_proteins[i][2]
-#        print sequence_only , 'post processing'    # debug
         print '\n\n\nExtracting and Analyzing the Results:\n\n'
         task_summaries[i] = run_postprocessing( task_summaries[i] , sequence_only = sequence_only )
 
@@ -246,7 +229,6 @@ def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_mo
     running_or_queued = {}
     rounds = 0
     all_completed_jobs = []    # prevents annoying bulk output, only see it the first time it completes
-#    raw_input( 'start submitting + monitoring?' )    # debug
     while not len( completed ) == len( task_list ):
         rounds += 1
         print '\n\nQUEUE MONITOR ROUND ' + str( rounds )
@@ -330,7 +312,6 @@ def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_mo
 
             
                 # submit this script using a queue command
-#                pbs_command = command_dict['qsub_command']    # SHOULD already have an abspath to the script
                 # generate it here instead
                 pbs_options = {}
                 if command_dict['queue'] == 'parallel':
@@ -349,7 +330,6 @@ def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_mo
                 if '.' in new_job_id:
                     new_job_id = new_job_id[:new_job_id.find( '.' )]
                 print 'submitted ' + new_job_id
- #               print 'it was ' , task_summaries[i[0]].keys()    # debug
                 
                 # save the job id
                 # assume its queue
@@ -364,7 +344,6 @@ def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_mo
             print str( running_jobs ) + ' are still running...(excluding the jobs just submitted and including your other jobs)'
         
         # assess outcome of completed jobs
-#        still_running = 0
         for job_id in sorted( queue_status.keys() ):    # sort in numerical order, right?
             # debug
             if not job_id in all_completed_jobs:
@@ -375,7 +354,6 @@ def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_mo
                 task_id = running_or_queued[job_id][0]
                 command_index = running_or_queued[job_id][1]
                 command_dict = task_summaries[task_id]['commands'][command_index]
-#                print 'ooh,' , task_id , 'just finished, could be successful too!'    # debug
 
                 check_successful = determine_check_successful_function( command_dict , single_relax = single_relax )
 
@@ -384,7 +362,6 @@ def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_mo
                 failure_summary = ''
                 if isinstance( success , bool ):
                     complete = success
-#                    print complete , ' indeed '   # debug
                 elif len( success ) > 1 and isinstance( success[0] , bool ):
                     complete = success[0]
                     failure_summary += ' '+ ';'.join( [str( j ) for j in success[1:]] ) +' '
@@ -427,9 +404,6 @@ def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_mo
 
                 # write out "completed"? or "running_or_queued"?
 
-#            else:
-#                still_running += 1
-#        print str( still_running) + ' jobs still running (or queued)...'
             if queue_status[job_id] == 'C' and not job_id in all_completed_jobs:
                 all_completed_jobs.append( job_id )    # prevent redundant update info
 
@@ -451,7 +425,6 @@ def run_VIPUR_tasks_PBS( task_summaries , task_list , max_pbs_tries = 2 , ddg_mo
             print 'waiting ' + str( PBS_QUEUE_MONITOR_DELAY ) +'s...'
             time.sleep( PBS_QUEUE_MONITOR_DELAY )
 
-#        raw_input( 'continue to next round?' )    # debug
 
     # return anything?
     # write one last time?
@@ -473,7 +446,6 @@ def get_pbs_queue_status( user = PBS_USER , header_lines = 5 , trailer_lines = 1
     if user:
         command += ' -u ' + user
 
-#    queue_info = subprocess.Popen( command.split( ' ' ) , stdout = subprocess.PIPE , stdin = subprocess.PIPE , stderr = subprocess.STDOUT ).communicate()[0]
     queue_info = run_local_commandline( command , collect_stdout = True )
 
     # simple parsing

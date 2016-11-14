@@ -3,8 +3,8 @@
 
 """
 The VIPUR Classifier
-built an a classifier object to allow easy testing of alternative values
-and more complication analyses of output terms etc.
+built as a classifier object to allow easy testing of alternative values
+and more sophisticated analyses of output terms etc.
 
 Currently constructed as a VIPURClassifier with three LogisticRegressionClassifiers
 that represent different parameter sets for:
@@ -16,9 +16,6 @@ NOTE: the parameter values are NOT hardcoded and instead live in the VIPUR code 
 as several text files
 these text files currently have a hardcoded, unspecified order, to properly use them,
 the LABEL_DESCRIPTION list must match the feature order
-
-
-ehb: this code was grafted from elsewhere, it should be cleaned up for release
 """
 
 ################################################################################

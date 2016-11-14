@@ -59,7 +59,6 @@ def run_VIPUR_SLURM( pdb_filename = '' , variants_filename = '' ,
         # instead, run on the directory
         if not out_path:
             out_path = os.path.abspath( pdb_filename )
-#            print out_path
         
         fa_filenames = [(out_path +'/')*bool( out_path ) + i for i in os.listdir( pdb_filename ) if get_file_extension( i ) == 'fa']
         fa_filenames = [[i , get_root_filename( i ) + variants_filename] for i in fa_filenames if os.path.isfile( get_root_filename( i ) + variants_filename ) and not os.path.isfile( get_root_filename( i ) + '.pdb' )]
@@ -70,7 +69,6 @@ def run_VIPUR_SLURM( pdb_filename = '' , variants_filename = '' ,
 
         # look for pairs
         pdb_filenames = [[i , get_root_filename( i ) + variants_filename] for i in pdb_filenames if os.path.isfile( get_root_filename( i ) + variants_filename )]
-#        print [i for i in pdb_filenames if os.path.isfile( pdb_filename +'/'+ get_root_filename( i ) + variants_filename )]
 
         print str( len( pdb_filenames ) ) + ' pairs found'
         print str( len( fa_filenames ) ) + ' pairs found for sequence only mode'
@@ -145,20 +143,11 @@ def run_VIPUR_SLURM( pdb_filename = '' , variants_filename = '' ,
             # add for relax
             if task_summary['commands'][j]['feature'].replace( '_native' , '' ) == 'relax' and not 'rescore' in task_summary['commands'][j]['feature']:
                 command = command.replace( '.linuxgccrelease' , '.mpi.linuxgccrelease' )
-#                command = 'module load mvapich2/gnu/1.8.1;/share/apps/mvapich2/1.8.1/gnu/bin/mpiexec -n 36 ' + command
                 command = 'mpiexec -n 40 ' + command
                 command += ' -jd2:mpi_file_buf_job_distributor false'
                 command += ' -run:multiple_processes_writing_to_one_directory'
                 
-                # also use the parallel options
-#                pbs_options.update( PBS_PARALLEL_JOB_OPTIONS )
-#            else:
-
             slurm_options.update( SLURM_JOB_OPTIONS )
-
-            # put "cd" in front
-#            command = ('#!/bin/bash\n\ncd '+ i[3] +'\n\n')*bool( i[3] ) + command +'\n\n'
-#            command = ('cd '+ i[3] +';')*bool( i[3] ) + command    # not needed for slurm, use abspaths and one big batch
 
             # special...
             if task_summary['commands'][j]['feature'] == 'psiblast' and not 'num_threads' in task_summary['commands'][j]['command']:
@@ -199,27 +188,6 @@ def run_VIPUR_SLURM( pdb_filename = '' , variants_filename = '' ,
                 # srun or sbatch?
                 task_summary['commands'][j]['sbatch_command'] = create_executable_str( 'sbatch' , [script_filename] , slurm_options )
             
-            
-            # actually write the script...
-            # don't worry about optional #PBS header info
-#            script_filename = i[3] + '/'*bool( i[3] ) + get_root_filename( i[0] ).split( '/' )[-1] +'.'+ task_summary['commands'][j]['feature'] + '.slurm_script.sh'
-#            task_summary['commands'][j]['script_filename'] = script_filename
-
-            # only write ONE submission script per batch = run of VIPUR           
-#            f = open( script_filename , 'w' )
-#            f.write( SLURM_BASH_SCRIPT( command ) )
-#            f.close()
-            
-            # use the script filename as the source for any log files
-            # control the output and error paths
-#            for k in slurm_options.keys():
-#                if '__call__' in dir( slurm_options[k] ):
-#                    slurm_options[k] = slurm_options[k]( script_filename )
-
-            # also generate the pbs call? might as well, keep it simple...
-            # srun or sbatch?
-#            task_summary['commands'][j]['srun_command'] = create_executable_str( 'srun' , [script_filename] , slurm_options )
-
         # rewrite the task summary
         write_task_summary( task_summary , task_summary_filename )
 
@@ -227,7 +195,6 @@ def run_VIPUR_SLURM( pdb_filename = '' , variants_filename = '' ,
 
 
     # run them all
-#    run_VIPUR_task_summaries_serially( task_summaries , single_relax = single_relax , delete_intermediate_relax_files = delete_intermediate_relax_files )
     run_VIPUR_task_summaries_SLURM( task_summaries , single_relax = single_relax , delete_intermediate_relax_files = delete_intermediate_relax_files )
 
 
@@ -278,35 +245,22 @@ def run_VIPUR_task_summaries_SLURM( task_summaries , single_relax = False , dele
         # ...how to collect for salloc? still a mystery to me...
         
         # gather the commands
-#        run_VIPUR_tasks_in_batch_SLURM( task_summaries , non_rescore_tasks , rescore_tasks )
         # ...until its working, still just do them in series
         # MUST do ddg_monomer on single processor -N1 -n1 ...wtf...
         ddg_monomer_tasks = [i for i in non_rescore_tasks if 'ddg_monomer' in task_summaries[i[0]]['commands'][i[1]]['feature']]
         non_rescore_tasks = [i for i in non_rescore_tasks if not i in ddg_monomer_tasks]
         
-#        print ddg_monomer_tasks
-#        print non_rescore_tasks
-#        print len( non_rescore_tasks )
-
         # do ddg_monomer in betwee...cause why not?
         # as the many-job batch variant
-#        raw_input( 'do just ddg_monomer?' )
         run_VIPUR_tasks_SLURM( task_summaries , ddg_monomer_tasks )
         
-#        raw_input( 'the main runs?' )
         run_VIPUR_tasks_in_batch_SLURM( task_summaries , non_rescore_tasks )       
 
         # actually, do this with the ddg_monomer stuff
-#        raw_input( 'rescore now?' )
-#        run_VIPUR_tasks_in_batch_SLURM( task_summaries , rescore_tasks )
         run_VIPUR_tasks_SLURM( task_summaries , rescore_tasks )
     
     # return anything?
     # task summaries should be updated with all the necessary files...
-
-#    for i in xrange( len( task_summaries ) ):
-        # tasks will check if the task summaries indicates they have already be run
-#        task_summaries[i] = run_task_commands_serially( task_summaries[i] , single_relax = single_relax , delete_intermediate_relax_files = delete_intermediate_relax_files )
 
 
 ################################################################################

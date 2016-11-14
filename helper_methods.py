@@ -33,7 +33,7 @@ get_file_extension.__doc__ = 'Returns the file extension of  <in_filename>\n\nin
 # hacky version
 get_root_filename = lambda in_filename: in_filename[:-len( get_file_extension( in_filename ) ) - 1]
 get_root_filename.__doc__ = 'Returns the \"root filename\" of  <in_filename>  (pre file extension)\n\nin_filename[:len( in_filename.split( \'.\' )[-1] ) - 1]\na little hacky...'
-# better version
+# better version?
 #get_root_filename = lambda in_filename: ''.join( [i for i in in_filename.split( '.' )[:-1]] )
 
 
